@@ -1,6 +1,6 @@
 {
   "name": "orpc-nuxt",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "oRPC integration for Nuxt.",
   "homepage": "https://github.com/IlyaSemenov/orpc-nuxt#readme",
   "bugs": "https://github.com/IlyaSemenov/orpc-nuxt/issues",
