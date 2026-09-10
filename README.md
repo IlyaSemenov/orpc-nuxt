@@ -165,7 +165,29 @@ Invalidation marks matching queries as stale and refetches active ones.
 Inactive queries can refresh when used again.
 Create the decorated client inside your app plugin so callbacks use that app's QueryClient.
 
-## Updating cached data
+## Direct calls and oRPC utilities
+
+Use `.call()` when you just need a procedure's response, without query state or caching:
+
+```ts
+const post = await orpc.blog.posts.get.call({ id: 1 })
+```
+
+The client also exposes oRPC's utilities:
+
+- `.key()` builds a cache key prefix for a procedure or router branch.
+- `.queryKey()` builds a query key for a specific input.
+- `.queryOptions()` builds options for Vue Query's `useQuery`.
+- `.mutationOptions()` builds options for Vue Query's `useMutation`.
+- `.infiniteOptions()` builds options for Vue Query's `useInfiniteQuery` for pagination.
+
+Subscription composables are not available yet.
+Procedures that return streams keep the oRPC utilities but do not get this package's `useQuery` or `useMutation` methods.
+The module does not automatically transfer streamed query results from server to browser.
+
+## Query data
+
+### Updating cached data
 
 Assigning a new response to `data.value` updates the shared cache for the query's current input.
 Other components reading the same query see the update too.
@@ -173,19 +195,19 @@ Nested properties are readonly unless you enable `clone: true`.
 
 ```ts
 const { data } = await orpc.blog.posts.get.useQuery({ id: 1 })
-const savePost = orpc.blog.posts.update.useMutation()
 
-const response = await savePost.mutateAsync({
+const response = await orpc.blog.posts.update.call({
   id: 1,
   title: "Updated title",
 })
+
 data.value = response
 ```
 
 Treat the original `response` as readonly after assigning it to `data.value`.
 The assignment passes it to the cache without a defensive copy, so changing `response.title` could modify cached data directly.
 
-## Editing drafts
+### Mutable data
 
 With `clone: true`, `data.value` contains a reactive local copy that you can edit, for example in a form.
 There are two ways to change it:
@@ -197,14 +219,12 @@ There are two ways to change it:
 const id = 1
 const { data } = await orpc.blog.posts.get.useQuery({ id }, { clone: true })
 
-const savePost = orpc.blog.posts.update.useMutation()
-
 if (data.value) {
   // Only this query's local copy changes.
   data.value.title = "Local draft"
 
   // Save the draft, then share the server's response with other components.
-  data.value = await savePost.mutateAsync({
+  data.value = await orpc.blog.posts.update.call({
     id,
     title: data.value.title,
   })
@@ -218,21 +238,6 @@ Changing the query input also switches the copy to that input's data.
 Keep a separate form draft if it must survive these updates.
 
 You cannot combine `clone: true` with `select`; selected results are readonly.
-
-## Direct calls and oRPC utilities
-
-Use `.call()` when you just need a procedure's response, without query state or caching:
-
-```ts
-const post = await orpc.blog.posts.get.call({ id: 1 })
-```
-
-The client also exposes oRPC's `.key()`, `.queryKey()`, `.queryOptions()`, `.mutationOptions()`, and `.infiniteOptions()` utilities.
-You can pass their options to Vue Query composables, for example `.infiniteOptions()` to `useInfiniteQuery` for pagination.
-
-Subscription composables are not available yet.
-Procedures that return streams keep the oRPC utilities but do not get this package's `useQuery` or `useMutation` methods.
-The module does not automatically transfer streamed query results from server to browser.
 
 ## Advanced
 
