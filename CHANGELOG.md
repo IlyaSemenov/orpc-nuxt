@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.1.1
+
+### Patch Changes
+
+- ac187ab: Support Nuxt 3.14 and later, and accept the `@nuxt/kit` and `devalue` versions that the host Nuxt installs.
+
 ## 0.1.0
 
 ### Minor Changes
