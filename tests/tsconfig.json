@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig",
+  "compilerOptions": {
+    "paths": {
+      // Bun and tsc check source here; the Nuxt fixture uses its own config and built exports.
+      "orpc-nuxt/client": ["../src/runtime/client.ts"]
+    }
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["fixtures"]
+}
