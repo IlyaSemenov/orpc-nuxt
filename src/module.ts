@@ -16,7 +16,7 @@ export default defineNuxtModule<ModuleOptions>({
   meta: {
     name: "orpc-nuxt",
     configKey: "orpc",
-    compatibility: { nuxt: "^3.17.5 || ^4.0.0" },
+    compatibility: { nuxt: "^3.14.1592 || ^4.0.1" },
   },
   defaults: { queryClient: true },
   setup(options, nuxt) {

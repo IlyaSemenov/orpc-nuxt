@@ -10,7 +10,7 @@ const workspace = await mkdtemp(join(tmpdir(), "orpc-nuxt-"))
 const args = process.argv.slice(2)
 const devOnly = args.includes("--dev")
 const versions = args.filter((arg) => arg !== "--dev")
-if (!versions.length) versions.push("3.17.5", "4.5.2")
+if (!versions.length) versions.push("3.14.1592", "3.21.11", "4.0.1", "4.5.2")
 
 /** Run an isolated consumer's command without relying on the source workspace's dependencies. */
 async function run(command: string[], cwd: string, env = process.env) {

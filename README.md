@@ -447,6 +447,6 @@ Install dependencies with `bun install`, then run `bun run build`, `bun run type
 To try the package in a Nuxt app, build it and run `bunx nuxt dev tests/fixtures/nuxt`.
 The example app uses the built package, so rebuild after changing its source.
 
-Run `bunx playwright install chromium`, then `bun run test:nuxt` to check the packed npm archive with Nuxt 3.17.5 and Nuxt 4.5.2.
+Run `bunx playwright install chromium`, then `bun run test:nuxt` to check the packed npm archive with the oldest and newest supported Nuxt 3 and Nuxt 4 releases.
 Each version is checked with both module-managed and app-managed QueryClients, including types, SSR, and hydration in development and production.
-To check one version, use `bun run test:nuxt 3.17.5`.
+To check one version, use `bun run test:nuxt 3.14.1592`.
