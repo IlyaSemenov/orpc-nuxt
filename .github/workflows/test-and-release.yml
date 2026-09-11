@@ -51,7 +51,7 @@ jobs:
       - name: Install browser for Nuxt integration tests
         run: bunx playwright install --with-deps chromium
 
-      - name: Test packed package with Nuxt 3 and 4
+      - name: Test packed package with Nuxt
         run: bun run test:nuxt
 
       - name: Capture release version

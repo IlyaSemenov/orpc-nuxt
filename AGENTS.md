@@ -76,4 +76,5 @@ Describe the user-visible change.
 - Run the `test` script when behavior changes.
 - Run the `build` script when package exports, declarations, or supported runtimes change.
 - Run `test:nuxt` when changing Nuxt compatibility, plugin registration, or SSR hydration.
-  Install the packed archive in isolated Nuxt 3 and Nuxt 4 consumers; keep their generated configuration and dependencies outside the source workspace.
+  Install the packed archive in an isolated consumer running the exact Nuxt version installed in the workspace; keep its generated configuration and dependencies outside the source workspace.
+  Check other Nuxt versions only on explicit request, by passing them to `test:nuxt`.

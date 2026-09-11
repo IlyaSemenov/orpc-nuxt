@@ -3,14 +3,18 @@ import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 
+import nuxtPkg from "nuxt/package.json"
+
 import pkg from "../../package.json"
 
 const root = resolve(import.meta.dir, "../..")
 const workspace = await mkdtemp(join(tmpdir(), "orpc-nuxt-"))
 const args = process.argv.slice(2)
 const devOnly = args.includes("--dev")
+// Versions are opt-in for manual compatibility checks.
 const versions = args.filter((arg) => arg !== "--dev")
-if (!versions.length) versions.push("3.14.1592", "3.21.11", "4.0.1", "4.5.2")
+// Reproduce the exact Nuxt installed here, so the default run stays deterministic and matches the lockfile.
+if (!versions.length) versions.push(nuxtPkg.version)
 
 /** Run an isolated consumer's command without relying on the source workspace's dependencies. */
 async function run(command: string[], cwd: string, env = process.env) {
