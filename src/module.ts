@@ -27,10 +27,11 @@ export default defineNuxtModule<ModuleOptions>({
     const optimizeDeps = (nuxt.options.vite.optimizeDeps ??= {})
     optimizeDeps.exclude ??= []
     optimizeDeps.exclude.push("orpc-nuxt/client", "@tanstack/vue-query")
-    addImports({
-      name: "useOrpc",
-      from: resolver.resolve("./runtime/composables"),
-    })
+    const composables = resolver.resolve("./runtime/composables")
+    addImports([
+      { name: "useOrpc", from: composables },
+      { name: "useOrpcQueryClient", from: composables },
+    ])
     if (options.queryClient) {
       const config = options.queryClient === true ? {} : options.queryClient
       addPluginTemplate({

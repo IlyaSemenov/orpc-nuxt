@@ -1,1 +1,1 @@
-export { useOrpc } from "./nuxt/composables"
+export { useOrpc, useOrpcQueryClient } from "./nuxt/composables"

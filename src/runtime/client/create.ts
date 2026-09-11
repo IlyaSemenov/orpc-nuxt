@@ -1,16 +1,11 @@
 import type { AnyNestedClient } from "@orpc/client"
 import { createTanstackQueryUtils } from "@orpc/tanstack-query"
-import {
-  type QueryClient,
-  type QueryKey,
-  useQueryClient,
-  VUE_QUERY_CLIENT,
-} from "@tanstack/vue-query"
-import { hasInjectionContext, inject } from "vue"
+import { type QueryKey, useQueryClient } from "@tanstack/vue-query"
 
 import type { ORPCNuxtClient, ORPCNuxtClientOptions } from "../types"
 import { useORPCMutation } from "../vue-query/mutation"
 import { useORPCQuery } from "../vue-query/query"
+import { resolveQueryClient } from "../vue-query/query-client"
 import { decorateClient } from "./decorate"
 
 /**
@@ -28,14 +23,10 @@ export function createORPCNuxtClient<T extends AnyNestedClient>(
 ): ORPCNuxtClient<T> {
   const utils = createTanstackQueryUtils(client, { prefix: options.prefix })
   // Capture the app's cache while injection is available; mutation callbacks run outside setup.
-  let queryClient =
-    options.queryClient ??
-    (hasInjectionContext()
-      ? inject<QueryClient | undefined>(VUE_QUERY_CLIENT, undefined)
-      : undefined)
+  let queryClient = options.queryClient ?? resolveQueryClient()
 
   /** Resolve lazily for clients created outside Vue, then reuse the same cache in callbacks. */
-  function resolveQueryClient() {
+  function getQueryClient() {
     return (queryClient ??= useQueryClient())
   }
 
@@ -43,14 +34,14 @@ export function createORPCNuxtClient<T extends AnyNestedClient>(
   function createMethods(target: object) {
     return {
       useQuery(input: unknown, queryOptions: unknown) {
-        return useORPCQuery(target, input, queryOptions, resolveQueryClient())
+        return useORPCQuery(target, input, queryOptions, getQueryClient())
       },
       useMutation(mutationOptions: unknown) {
-        return useORPCMutation(target, mutationOptions, resolveQueryClient())
+        return useORPCMutation(target, mutationOptions, getQueryClient())
       },
       invalidate() {
         const utils = target as { key: () => QueryKey }
-        return resolveQueryClient().invalidateQueries({ queryKey: utils.key() })
+        return getQueryClient().invalidateQueries({ queryKey: utils.key() })
       },
     }
   }

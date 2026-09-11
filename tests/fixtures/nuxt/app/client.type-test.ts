@@ -1,5 +1,5 @@
 import type { RouterClient } from "@orpc/server"
-import { skipToken } from "@tanstack/vue-query"
+import { type QueryClient, skipToken } from "@tanstack/vue-query"
 import { defineNuxtPlugin } from "orpc-nuxt/plugin"
 import { reactive, ref } from "vue"
 
@@ -146,4 +146,12 @@ export async function checkNestedClientTypes() {
   orpc.blog.posts.stream.useQuery()
   // @ts-expect-error Nested streams do not expose regular mutation composables.
   orpc.blog.posts.stream.useMutation()
+}
+
+/** Check the auto-imported cache accessor against the built declarations. */
+export function checkQueryClientTypes() {
+  const queryClient = useOrpcQueryClient()
+  queryClient satisfies QueryClient
+  // @ts-expect-error The accessor reads the app's own cache and takes no arguments.
+  useOrpcQueryClient(queryClient)
 }

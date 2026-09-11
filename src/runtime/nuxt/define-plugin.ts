@@ -1,6 +1,5 @@
 import { type AnyNestedClient, createORPCClient } from "@orpc/client"
 import { RPCLink } from "@orpc/client/fetch"
-import { type QueryClient, VUE_QUERY_CLIENT } from "@tanstack/vue-query"
 import {
   defineNuxtPlugin as createNuxtPlugin,
   type NuxtApp,
@@ -8,10 +7,10 @@ import {
   useRequestHeaders,
   useRequestURL,
 } from "nuxt/app"
-import { inject } from "vue"
 
 import { createORPCNuxtClient } from "../client/create"
 import type { ORPCNuxtClient, ORPCNuxtClientOptions } from "../types"
+import { resolveQueryClient } from "../vue-query/query-client"
 
 /** Configure the HTTP transport and cache used by a Nuxt app's injected oRPC client. */
 export interface OrpcPluginOptions extends ORPCNuxtClientOptions {
@@ -36,8 +35,7 @@ export function defineNuxtPlugin<T extends AnyNestedClient>(
 ): Plugin<{ orpc: ORPCNuxtClient<T> }> {
   return createNuxtPlugin((nuxtApp) => {
     const options = setup(nuxtApp)
-    const queryClient =
-      options.queryClient ?? inject<QueryClient | undefined>(VUE_QUERY_CLIENT, undefined)
+    const queryClient = options.queryClient ?? resolveQueryClient(nuxtApp.vueApp)
     if (!queryClient) {
       throw new Error(
         "orpc-nuxt: install Vue Query before the oRPC plugin. Enable the module's QueryClient, use enforce: 'pre' in your Vue Query plugin, or pass queryClient explicitly.",

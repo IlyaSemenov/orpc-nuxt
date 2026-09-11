@@ -390,6 +390,19 @@ export default defineNuxtPlugin({
 
 Nuxt registers the handlers declared in `hooks` before running plugins, so this handler is ready when the module creates the QueryClient.
 
+### Query client
+
+`useOrpcQueryClient()` returns the QueryClient installed for the app, whether by the module or by your own plugin.
+Unlike Vue Query's `useQueryClient()`, it also works where Vue injection is unavailable, such as in an event handler or between tests:
+
+```ts
+const queryClient = useOrpcQueryClient()
+queryClient.clear()
+```
+
+It needs the Nuxt context, which the browser keeps available once the app has started.
+During server rendering, call it inside `nuxtApp.runWithContext()`.
+
 ### Existing Vue Query setup
 
 If your app already installs Vue Query and transfers its cache between server and browser, disable the module's QueryClient setup:

@@ -2,15 +2,15 @@
 import { useQueryClient } from "@tanstack/vue-query"
 
 const orpc = useOrpc()
-const queryClient = useQueryClient()
 const key = orpc.blog.posts.get.queryKey({ input: { id: 1 } })
-queryClient.setQueryData(key, { id: 1, details: { title: "cached" } })
+useQueryClient().setQueryData(key, { id: 1, details: { title: "cached" } })
 const invalidated = ref(false)
 
 /** Invoke the helper from a browser event before this app has created any query or mutation. */
 async function invalidate() {
   await orpc.blog.posts.invalidate()
-  invalidated.value = queryClient.getQueryState(key)?.isInvalidated === true
+  // Reading without Vue injection must find the cache that Vue Query provides during setup.
+  invalidated.value = useOrpcQueryClient().getQueryState(key)?.isInvalidated === true
 }
 </script>
 
