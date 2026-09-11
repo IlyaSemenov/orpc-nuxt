@@ -293,7 +293,9 @@ Only headers listed in `forwardHeaders` are forwarded from the incoming SSR requ
 
 Use `createORPCNuxtClient` when you need a custom transport or want SSR to call the router directly.
 Instead of the shared HTTP plugin above, add a browser plugin and a server plugin.
-Both provide the client under the `orpc` key: `useOrpc()` reads it as `useNuxtApp().$orpc` and infers the router type from that injection.
+
+Keep `orpc-nuxt` in `modules`: manual setup replaces that plugin, not the module that installs the QueryClient and the composables.
+Both plugins provide the client under the `orpc` key: `useOrpc()` reads it as `useNuxtApp().$orpc` and infers the router type from that injection.
 
 The browser plugin sends requests to `/rpc` over HTTP:
 
@@ -334,6 +336,9 @@ export default defineNuxtPlugin(() => {
   }
 })
 ```
+
+Let both plugins infer the client type instead of annotating it.
+Nuxt combines what they provide, so a widened type in either one leaves `useOrpc()` without procedure types.
 
 ### SSR and cache configuration
 
