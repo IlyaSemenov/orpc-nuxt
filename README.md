@@ -16,7 +16,7 @@ Inspired by [trpc-nuxt](https://github.com/wobsoriano/trpc-nuxt).
 npm install orpc-nuxt @orpc/client@2.0.0-beta.35 @orpc/server@2.0.0-beta.35 @orpc/tanstack-query@2.0.0-beta.35 @tanstack/vue-query
 ```
 
-Use the oRPC v2 beta versions shown above.
+Install oRPC by version: v2 is still in beta, and this package needs `2.0.0-beta.35` or newer.
 
 ## Setup
 

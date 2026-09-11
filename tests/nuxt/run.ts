@@ -9,6 +9,12 @@ import pkg from "../../package.json"
 
 const root = resolve(import.meta.dir, "../..")
 const fixture = join(root, "tests/fixtures/nuxt")
+
+const args = process.argv.slice(2)
+const devOnly = args.includes("--dev")
+
+const workspace = await mkdtemp(join(tmpdir(), "orpc-nuxt-"))
+
 // The consumer installs only the package's own dependencies, so component tests and build output stay behind.
 const excludedFromConsumer = new Set([
   "node_modules",
@@ -18,9 +24,10 @@ const excludedFromConsumer = new Set([
   "test",
   "vitest.config.ts",
 ])
-const workspace = await mkdtemp(join(tmpdir(), "orpc-nuxt-"))
-const args = process.argv.slice(2)
-const devOnly = args.includes("--dev")
+
+// oRPC packages are released in lockstep, and the peer ranges also accept newer betas.
+const orpcVersion = pkg.devDependencies["@orpc/server"]
+
 // Versions are opt-in for manual compatibility checks.
 const versions = args.filter((arg) => arg !== "--dev")
 // Reproduce the exact Nuxt installed here, so the default run stays deterministic and matches the lockfile.
@@ -115,7 +122,10 @@ try {
             "orpc-nuxt": `file:${archive}`,
             ...pkg.peerDependencies,
             nuxt: version,
-            "@orpc/server": pkg.devDependencies["@orpc/server"],
+            // Install the oRPC beta of this workspace, so the default run stays reproducible.
+            "@orpc/client": orpcVersion,
+            "@orpc/tanstack-query": orpcVersion,
+            "@orpc/server": orpcVersion,
             "@types/node": "^22.0.0",
             zod: pkg.devDependencies.zod,
             typescript: pkg.devDependencies.typescript,
