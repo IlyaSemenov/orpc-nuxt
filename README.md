@@ -492,6 +492,9 @@ Passing an explicit `queryClient` gives the tests their own cache:
 Omit it to test against the cache the module installs.
 Read that one with `useOrpcQueryClient()`, and set its defaults through the `orpc.queryClient` module options.
 
+When a shared setup file mocks `useOrpc()` for many test files, import `useOrpcQueryClient()` in the file that clears the cache.
+A module that the hoisted `mockNuxtImport()` factory reaches cannot import it: the factory runs first and fails on an uninitialized binding.
+
 ### Outside Vue components
 
 You can call `.useQuery()` and `.useMutation()` outside a component, for example in a script or in a test that never mounts one.
