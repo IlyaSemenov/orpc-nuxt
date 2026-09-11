@@ -21,7 +21,7 @@ type AppClient = {
 }
 
 function setup() {
-  return createTestORPCClient<AppClient>({ queryClient: new QueryClient() })
+  return createTestORPCClient<AppClient>()
 }
 
 describe("test oRPC client", () => {
@@ -56,19 +56,25 @@ describe("test oRPC client", () => {
     expect(replacement.mock.calls).toHaveLength(1)
   })
 
-  test("reset only removes registrations and does not affect another client or the cache", async () => {
+  test("the owned cache reports a failing procedure instead of retrying it", () => {
+    expect(setup().queryClient.getDefaultOptions().queries?.retry).toBe(false)
+  })
+
+  test("reset clears registrations and the cache without touching another client", async () => {
     const queryClient = new QueryClient()
-    const first = createTestORPCClient<AppClient>({ queryClient })
-    const second = setup()
-    first.procedures.blog.posts.list.handle(() => [{ id: 1, title: "First" }])
-    second.procedures.blog.posts.list.handle(() => [{ id: 2, title: "Second" }])
-    queryClient.setQueryData(["retained"], "cached")
+    const own = createTestORPCClient<AppClient>({ queryClient })
+    const other = setup()
+    own.procedures.blog.posts.list.handle(() => [{ id: 1, title: "First" }])
+    other.procedures.blog.posts.list.handle(() => [{ id: 2, title: "Second" }])
+    queryClient.setQueryData(["cached"], "value")
+    other.queryClient.setQueryData(["cached"], "value")
 
-    first.reset()
+    own.reset()
 
-    await expect(first.client.blog.posts.list.call()).rejects.toThrow("blog.posts.list")
-    expect(await second.client.blog.posts.list.call()).toEqual([{ id: 2, title: "Second" }])
-    expect(queryClient.getQueryData<string>(["retained"])).toBe("cached")
+    await expect(own.client.blog.posts.list.call()).rejects.toThrow("blog.posts.list")
+    expect(queryClient.getQueryData(["cached"])).toBeUndefined()
+    expect(await other.client.blog.posts.list.call()).toEqual([{ id: 2, title: "Second" }])
+    expect(other.queryClient.getQueryData<string>(["cached"])).toBe("value")
   })
 
   test("preserves an ORPCError thrown by a handler", async () => {

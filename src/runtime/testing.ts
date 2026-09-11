@@ -1,5 +1,6 @@
 import type { AnyNestedClient, Client, ClientLink, InferClientContext } from "@orpc/client"
 import { createORPCClient } from "@orpc/client"
+import { QueryClient } from "@tanstack/vue-query"
 import type { Mock } from "vitest"
 import { vi } from "vitest"
 
@@ -35,7 +36,9 @@ export interface TestORPCClient<T extends AnyNestedClient> {
   client: ORPCNuxtClient<T>
   /** Register typed implementations and receive Vitest mocks for call assertions. */
   procedures: TestORPCProcedures<T>
-  /** Remove every registered procedure implementation. */
+  /** The cache the client reads and writes, to seed or inspect from a test. */
+  queryClient: QueryClient
+  /** Remove every registered procedure implementation and clear the query cache. */
   reset: () => void
 }
 
@@ -44,13 +47,24 @@ export interface TestORPCClient<T extends AnyNestedClient> {
  * The entrypoint has no Nuxt runtime dependency.
  * A shared setup file can therefore import it when Vitest hoists `mockNuxtImport()`.
  *
- * @param options - Cache key prefix and an optional test-owned QueryClient.
- * @returns A decorated client, its typed registration tree and a registration reset function.
+ * Without a `queryClient` the client owns one that never retries, so a failing procedure fails
+ * the test instead of retrying until it times out.
+ *
+ * @param options - Cache key prefix and a QueryClient to use instead of the owned one.
+ * @returns A decorated client, its typed registration tree, its cache and a reset function.
  */
 export function createTestORPCClient<T extends AnyNestedClient>(
   options: ORPCNuxtClientOptions = {},
 ): TestORPCClient<T> {
   const registrations = new Map<string, Mock<RuntimeHandler>>()
+  const queryClient =
+    options.queryClient ??
+    new QueryClient({
+      defaultOptions: {
+        // Retries turn a failing procedure into a test timeout instead of a reported failure.
+        queries: { retry: false },
+      },
+    })
 
   /** Register one handler without sharing state with another factory instance. */
   function registerHandler(path: string, handler: RuntimeHandler) {
@@ -73,7 +87,7 @@ export function createTestORPCClient<T extends AnyNestedClient>(
       return await callHandler(path.join("."), input)
     },
   }
-  const client = createORPCNuxtClient(createORPCClient<T>(link), options)
+  const client = createORPCNuxtClient(createORPCClient<T>(link), { ...options, queryClient })
   const procedures = createRecursiveProxy([], (path, args) => {
     if (path.at(-1) !== "handle") {
       throw new Error(`Unknown test procedure call: ${path.join(".")}`)
@@ -90,7 +104,11 @@ export function createTestORPCClient<T extends AnyNestedClient>(
   return {
     client,
     procedures,
-    reset: () => registrations.clear(),
+    queryClient,
+    reset: () => {
+      registrations.clear()
+      queryClient.clear()
+    },
   }
 }
 

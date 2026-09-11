@@ -454,34 +454,22 @@ Each procedure leaf in `procedures` has a `.handle()` method that registers a ty
 // test/nuxt/setup.ts
 import { mockNuxtImport } from "@nuxt/test-utils/runtime"
 import type { RouterClient } from "@orpc/server"
-import { QueryClient } from "@tanstack/vue-query"
 import { createTestORPCClient } from "orpc-nuxt/testing"
 import { afterEach } from "vitest"
 
 import type { router } from "~~/server/rpc/router"
 
-const queryClient = new QueryClient({
-  // Report a failing procedure instead of retrying it until the test times out.
-  defaultOptions: { queries: { retry: false } },
-})
-
-export const { client, procedures, reset } = createTestORPCClient<RouterClient<typeof router>>({
-  queryClient,
-})
+export const { client, procedures, reset } = createTestORPCClient<RouterClient<typeof router>>()
 
 // Return the composable itself; Vitest hoists this factory before the setup file runs.
 mockNuxtImport("useOrpc", () => () => client)
 
-afterEach(() => {
-  reset() // Remove registered handlers.
-  queryClient.clear() // Remove cached responses.
-})
+afterEach(reset)
 ```
 
 `orpc-nuxt/testing` does not import `nuxt/app`, so the hoisted `mockNuxtImport()` factory can load it safely.
-The explicit QueryClient keeps the test cache isolated and lets the setup clear it after each test.
-To use the application's QueryClient instead, omit the option and configure its defaults through `orpc.queryClient`.
-In that mode, import `useOrpcQueryClient()` only from a module that the hoisted factory cannot reach.
+The client owns a QueryClient that never retries, so a failing procedure fails the test instead of timing out, and `reset()` removes the registered handlers together with the cached responses.
+Reach that cache as `queryClient` to seed or inspect it, or pass your own to `createTestORPCClient()`; `reset()` clears that one as well.
 
 Register the required handlers before mounting; `mountSuspended()` waits for awaited queries before assertions:
 
