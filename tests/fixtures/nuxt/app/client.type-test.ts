@@ -77,7 +77,7 @@ export async function checkNestedClientTypes() {
     select: (post) => {
       post.id satisfies number
       // @ts-expect-error Nested select callbacks receive the inferred response.
-      post.missing
+      void post.missing
       return post.details
     },
   })
@@ -94,7 +94,7 @@ export async function checkNestedClientTypes() {
       output.details.title satisfies string
       variables.id satisfies number
       // @ts-expect-error Callback output must not become any through $orpc.
-      output.missing
+      void output.missing
     },
   })
   const updated = await mutation.mutateAsync({ id: 1, title: "updated" })
@@ -111,7 +111,7 @@ export async function checkNestedClientTypes() {
   const user = await orpc.blog.users.get.useQuery()
   user.data.value?.name satisfies string | undefined
   // @ts-expect-error Sibling procedures must not inherit another leaf's response.
-  user.data.value?.id
+  void user.data.value?.id
   // @ts-expect-error Missing intermediate paths must fail through useOrpc.
   orpc.blog.missing.get.useQuery()
   // @ts-expect-error Missing leaves must fail through useNuxtApp().$orpc too.

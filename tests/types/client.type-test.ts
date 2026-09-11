@@ -130,7 +130,7 @@ async function nestedInference() {
     select: (post) => {
       post.id satisfies number
       // @ts-expect-error The select callback receives the actual procedure output.
-      post.missing
+      void post.missing
       return post.author
     },
   })
@@ -147,7 +147,7 @@ async function nestedInference() {
       output.author.name satisfies string
       variables.id satisfies number
       // @ts-expect-error Mutation callback output must not become any.
-      output.name
+      void output.name
     },
   })
   const updated = await mutation.mutateAsync({ id: 1 })
@@ -162,7 +162,7 @@ async function nestedInference() {
   const user = await orpc.blog.users.get.useQuery()
   user.data.value?.name satisfies string | undefined
   // @ts-expect-error Sibling procedures have independent response types.
-  user.data.value?.id
+  void user.data.value?.id
   // @ts-expect-error Missing intermediate router branches are rejected.
   orpc.blog.missing.get.useQuery()
   // @ts-expect-error Missing leaves are rejected.
@@ -229,7 +229,7 @@ function contextInference(raw: {
   )
   query.error.value?.message satisfies string | undefined
   // @ts-expect-error Nested query errors retain their error type.
-  query.error.value?.missing
+  void query.error.value?.missing
   // @ts-expect-error Required context cannot be omitted at a nested query.
   orpc.blog.posts.get.useQuery({ id: 1 })
   // @ts-expect-error Required context also applies to the clone overload.
@@ -257,7 +257,7 @@ function contextInference(raw: {
     onError: (error) => {
       error.message satisfies string
       // @ts-expect-error Nested mutation errors retain their error type.
-      error.missing
+      void error.missing
     },
   })
 }
