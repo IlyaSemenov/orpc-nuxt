@@ -68,8 +68,6 @@ const query = await orpc.blog.posts.get.useQuery({ id: 1 })
 - `query.refetch()` fetches the current query again.
 - `query.invalidate()` marks its cached result as stale and refetches it if it is active.
 
-You can also access the client as `useNuxtApp().$orpc`; both accessors infer types from your plugin.
-
 ### Reactive input and options
 
 Pass a ref, reactive object, or getter when the input can change.
@@ -295,6 +293,7 @@ Only headers listed in `forwardHeaders` are forwarded from the incoming SSR requ
 
 Use `createORPCNuxtClient` when you need a custom transport or want SSR to call the router directly.
 Instead of the shared HTTP plugin above, add a browser plugin and a server plugin.
+Both provide the client under the `orpc` key: `useOrpc()` reads it as `useNuxtApp().$orpc` and infers the router type from that injection.
 
 The browser plugin sends requests to `/rpc` over HTTP:
 
@@ -426,9 +425,71 @@ If you have multiple oRPC clients with the same procedure paths, give each a dif
 const orpc = createORPCNuxtClient(client, { prefix: "blog" })
 ```
 
+### Component tests
+
+Component tests need the Nuxt environment of `@nuxt/test-utils`:
+
+```ts
+// vitest.config.ts
+import { defineVitestConfig } from "@nuxt/test-utils/config"
+
+export default defineVitestConfig({})
+```
+
+That configuration runs every test under `test/nuxt/` or `tests/nuxt/`, and every test named `*.nuxt.test.ts` or `*.nuxt.spec.ts`, against your application.
+Replace `useOrpc()` with a client that returns fixed data, then mount the component with `mountSuspended()` so its awaited queries resolve before the assertions.
+The replacement can be any nested object of async functions; only the procedures the component calls have to exist.
+
+```ts
+// test/nuxt/post-list.spec.ts
+import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime"
+import { QueryClient } from "@tanstack/vue-query"
+import { createORPCNuxtClient } from "orpc-nuxt/client"
+import { afterEach, expect, test } from "vitest"
+
+import PostList from "~/components/post-list.vue"
+
+const queryClient = new QueryClient({
+  // Report a failing procedure instead of retrying it until the test times out.
+  defaultOptions: { queries: { retry: false } },
+})
+
+const orpc = createORPCNuxtClient(
+  {
+    blog: {
+      posts: {
+        list: async () => [{ id: 1, title: "First post" }],
+      },
+    },
+  },
+  { queryClient },
+)
+
+// Vitest runs this factory before the file body, so it must return the composable without calling it.
+mockNuxtImport("useOrpc", () => () => orpc)
+
+afterEach(() => {
+  // Start every test from an empty cache, so an earlier response cannot satisfy a later query.
+  queryClient.clear()
+})
+
+test("renders the posts", async () => {
+  const component = await mountSuspended(PostList)
+  expect(component.text()).toContain("First post")
+})
+```
+
+Passing an explicit `queryClient` gives the tests their own cache:
+
+- The application's cache never carries data from one test into the next.
+- Test defaults such as `retry: false` stay in the test file instead of the module options.
+
+Omit it to test against the cache the module installs.
+Read that one with `useOrpcQueryClient()`, and set its defaults through the `orpc.queryClient` module options.
+
 ### Outside Vue components
 
-You can call `.useQuery()` and `.useMutation()` outside a component, for example in tests.
+You can call `.useQuery()` and `.useMutation()` outside a component, for example in a script or in a test that never mounts one.
 Create them inside `scope.run()` so Vue can track their reactive subscriptions, then call `scope.stop()` when you are done.
 When Vue injection is unavailable, pass a QueryClient explicitly:
 
@@ -456,6 +517,8 @@ try {
 ## Development
 
 Install dependencies with `bun install`, then run `bun run build`, `bun run types`, and `bun run test`.
+
+Run `bun run test:component` to check the documented component-test recipe in the fixture application; it uses the built package, so build first.
 
 To try the package in a Nuxt app, build it and run `bunx nuxt dev tests/fixtures/nuxt`.
 The example app uses the built package, so rebuild after changing its source.

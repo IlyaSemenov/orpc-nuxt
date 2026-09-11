@@ -1,13 +1,23 @@
 import { cp, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
-import { join, resolve } from "node:path"
+import { join, relative, resolve } from "node:path"
 
 import nuxtPkg from "nuxt/package.json"
 
 import pkg from "../../package.json"
 
 const root = resolve(import.meta.dir, "../..")
+const fixture = join(root, "tests/fixtures/nuxt")
+// The consumer installs only the package's own dependencies, so component tests and build output stay behind.
+const excludedFromConsumer = new Set([
+  "node_modules",
+  ".nuxt",
+  ".nuxtrc",
+  ".output",
+  "test",
+  "vitest.config.ts",
+])
 const workspace = await mkdtemp(join(tmpdir(), "orpc-nuxt-"))
 const args = process.argv.slice(2)
 const devOnly = args.includes("--dev")
@@ -86,10 +96,13 @@ try {
     console.log(`Checking Nuxt ${version} with ${owner} QueryClient`)
     const env = { ...process.env, ORPC_TEST_QUERY_CLIENT: owner }
     const app = join(workspace, `nuxt-${version}-${owner}`)
-    await cp(join(root, "tests/fixtures/nuxt"), app, {
+    await cp(fixture, app, {
       recursive: true,
+      // Match inside the fixture only: the same names can appear in the directories above it.
       filter: (path) =>
-        !path.split(/[\\/]/).some((part) => ["node_modules", ".nuxt", ".output"].includes(part)),
+        !relative(fixture, path)
+          .split(/[\\/]/)
+          .some((part) => excludedFromConsumer.has(part)),
     })
     await writeFile(
       join(app, "package.json"),

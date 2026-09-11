@@ -30,6 +30,9 @@ const posts = {
         details: { title: input.title },
       }
     }),
+  list: os.handler(() => {
+    return [{ id: 1, title: "post 1" }]
+  }),
   ping: os.handler(() => "pong"),
   stream: os.handler(async function* () {
     yield "event"

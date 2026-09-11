@@ -14,7 +14,9 @@ Do not catalog files or restate information evident from their names and locatio
 - Keep production code in `src/`.
 - Keep focused module tests beside their source as `*.test.ts`.
 - Keep runtime integration tests in `tests/runtime/` and source type tests in `tests/types/`.
+- Keep Nuxt component tests in the fixture application's `test/nuxt/`, where its generated tsconfig also typechecks them.
 - Name compile-only tests `*.type-test.ts`; keep Nuxt type tests inside the fixture application so they use its generated injections and built package declarations.
+- Keep compile-only checks that reuse a component test's fixtures in that test file rather than a separate `*.type-test.ts`.
 - Keep `src/index.ts` limited to explicit public exports.
 - Treat `package.json` exports and supported runtimes as public contracts.
 
@@ -75,6 +77,7 @@ Describe the user-visible change.
 - Run the `types` script when public types or TypeScript configuration change.
 - Run the `test` script when behavior changes.
 - Run the `build` script when package exports, declarations, or supported runtimes change.
+- Run `test:component` when changing composables, auto-imports, or a documented testing recipe; it uses the built package, so build first.
 - Run `test:nuxt` when changing Nuxt compatibility, plugin registration, or SSR hydration.
   Install the packed archive in an isolated consumer running the exact Nuxt version installed in the workspace; keep its generated configuration and dependencies outside the source workspace.
   Check other Nuxt versions only on explicit request, by passing them to `test:nuxt`.
