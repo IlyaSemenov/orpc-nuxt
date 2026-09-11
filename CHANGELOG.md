@@ -1,5 +1,12 @@
 # orpc-nuxt
 
+## 0.2.0
+
+### Minor Changes
+
+- 5b3908a: Add the auto-imported `useOrpcQueryClient()`, which returns the app's QueryClient and also works outside Vue components.
+- aa9d708: Accept later oRPC 2.0.0 betas: `@orpc/client` and `@orpc/tanstack-query` now allow `^2.0.0-beta.35` instead of that exact version.
+
 ## 0.1.1
 
 ### Patch Changes
