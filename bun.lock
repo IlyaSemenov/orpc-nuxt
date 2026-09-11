@@ -35,8 +35,10 @@
         "@orpc/tanstack-query": "^2.0.0-beta.35",
         "@tanstack/vue-query": "^5.102.8",
         "nuxt": "^3.14.1592 || ^4.0.1",
+        "vitest": "^4.0.0 || ^5.0.0",
         "vue": "^3.5.0",
       },
+      "optionalPeers": ["vitest"],
     },
   },
   "packages": {

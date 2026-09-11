@@ -432,68 +432,76 @@ const orpc = createORPCNuxtClient(client, { prefix: "blog" })
 
 ### Component tests
 
-Component tests need the Nuxt environment of `@nuxt/test-utils`:
+Configure the Nuxt test environment and load a shared setup file:
 
 ```ts
 // vitest.config.ts
 import { defineVitestConfig } from "@nuxt/test-utils/config"
 
-export default defineVitestConfig({})
+export default defineVitestConfig({
+  test: {
+    setupFiles: ["test/nuxt/setup.ts"],
+  },
+})
 ```
 
 That configuration runs every test under `test/nuxt/` or `tests/nuxt/`, and every test named `*.nuxt.test.ts` or `*.nuxt.spec.ts`, against your application.
-Replace `useOrpc()` with a client that returns fixed data, then mount the component with `mountSuspended()` so its awaited queries resolve before the assertions.
-The replacement can be any nested object of async functions; only the procedures the component calls have to exist.
+Use `createTestORPCClient()` from `orpc-nuxt/testing` to replace `useOrpc()` with an isolated fake client.
+`client` includes the regular composables and oRPC utilities.
+Each procedure leaf in `procedures` has a `.handle()` method that registers a typed handler and returns a Vitest mock.
 
 ```ts
-// test/nuxt/post-list.spec.ts
-import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime"
+// test/nuxt/setup.ts
+import { mockNuxtImport } from "@nuxt/test-utils/runtime"
+import type { RouterClient } from "@orpc/server"
 import { QueryClient } from "@tanstack/vue-query"
-import { createORPCNuxtClient } from "orpc-nuxt/client"
-import { afterEach, expect, test } from "vitest"
+import { createTestORPCClient } from "orpc-nuxt/testing"
+import { afterEach } from "vitest"
 
-import PostList from "~/components/post-list.vue"
+import type { router } from "~~/server/rpc/router"
 
 const queryClient = new QueryClient({
   // Report a failing procedure instead of retrying it until the test times out.
   defaultOptions: { queries: { retry: false } },
 })
 
-const orpc = createORPCNuxtClient(
-  {
-    blog: {
-      posts: {
-        list: async () => [{ id: 1, title: "First post" }],
-      },
-    },
-  },
-  { queryClient },
-)
-
-// Vitest runs this factory before the file body, so it must return the composable without calling it.
-mockNuxtImport("useOrpc", () => () => orpc)
-
-afterEach(() => {
-  // Start every test from an empty cache, so an earlier response cannot satisfy a later query.
-  queryClient.clear()
+export const { client, procedures, reset } = createTestORPCClient<RouterClient<typeof router>>({
+  queryClient,
 })
 
-test("renders the posts", async () => {
-  const component = await mountSuspended(PostList)
-  expect(component.text()).toContain("First post")
+// Return the composable itself; Vitest hoists this factory before the setup file runs.
+mockNuxtImport("useOrpc", () => () => client)
+
+afterEach(() => {
+  reset() // Remove registered handlers.
+  queryClient.clear() // Remove cached responses.
 })
 ```
 
-Passing an explicit `queryClient` gives the tests their own cache:
+`orpc-nuxt/testing` does not import `nuxt/app`, so the hoisted `mockNuxtImport()` factory can load it safely.
+The explicit QueryClient keeps the test cache isolated and lets the setup clear it after each test.
+To use the application's QueryClient instead, omit the option and configure its defaults through `orpc.queryClient`.
+In that mode, import `useOrpcQueryClient()` only from a module that the hoisted factory cannot reach.
 
-- The application's cache never carries data from one test into the next.
-- Test defaults such as `retry: false` stay in the test file instead of the module options.
+Register the required handlers before mounting; `mountSuspended()` waits for awaited queries before assertions:
 
-Omit it to test against the cache the module installs.
-Read that one with `useOrpcQueryClient()`, and set its defaults through the `orpc.queryClient` module options.
+```ts
+// test/nuxt/post-list.spec.ts
+import { mountSuspended } from "@nuxt/test-utils/runtime"
+import { expect, test } from "vitest"
 
-When a shared setup file mocks `useOrpc()` for many test files, import `useOrpcQueryClient()` in the file that clears the cache.
-A module that the hoisted `mockNuxtImport()` factory reaches cannot import it: the factory runs first and fails on an uninitialized binding.
+import PostList from "~/components/post-list.vue"
+
+import { procedures } from "./setup"
+
+test("renders the posts", async () => {
+  const list = procedures.blog.posts.list.handle(() => [{ id: 1, title: "First post" }])
+  const component = await mountSuspended(PostList)
+
+  expect(component.text()).toContain("First post")
+  expect(list).toHaveBeenCalledOnce()
+})
+```
 
 ### Outside Vue components
 

@@ -5,6 +5,7 @@ import { defineVitestConfig } from "@nuxt/test-utils/config"
 // Run the documented setup: tests under test/nuxt/ get this fixture's Nuxt environment.
 export default defineVitestConfig({
   test: {
+    setupFiles: ["test/nuxt/setup.ts"],
     environmentOptions: {
       // Load the fixture itself, whichever directory the test run starts from.
       nuxt: { rootDir: fileURLToPath(new URL(".", import.meta.url)) },

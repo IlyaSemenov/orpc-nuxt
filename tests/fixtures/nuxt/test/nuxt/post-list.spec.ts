@@ -1,45 +1,45 @@
-import { mockNuxtImport, mountSuspended } from "@nuxt/test-utils/runtime"
-import { QueryClient } from "@tanstack/vue-query"
-import { createORPCNuxtClient } from "orpc-nuxt/client"
-import { afterEach, expect, test } from "vitest"
+import { mountSuspended } from "@nuxt/test-utils/runtime"
+import { expect, test, vi } from "vitest"
 
 import PostList from "~/components/post-list.vue"
 
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: false } },
-})
+import { client, procedures } from "./setup"
 
-const orpc = createORPCNuxtClient(
-  {
-    blog: {
-      posts: {
-        // Resolve on a timer, so rendered posts prove that mounting awaited the query.
-        list: async () => {
-          await new Promise((resolve) => setTimeout(resolve, 10))
-          return [{ id: 1, title: "First post" }]
-        },
-      },
-    },
-  },
-  { queryClient },
-)
-
-// Vitest runs this factory before the file body, so it must return the composable without calling it.
-mockNuxtImport("useOrpc", () => () => orpc)
-
-afterEach(() => {
-  queryClient.clear()
-})
-
-test("renders posts from a replaced client", async () => {
+test("queries, mutates and invalidates through the test client", async () => {
+  let title = "First post"
+  const list = procedures.blog.posts.list.handle(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    return [{ id: 1, title }]
+  })
+  const update = procedures.blog.posts.update.handle((input) => {
+    title = input.title
+    return { id: input.id, details: { title } }
+  })
   const component = await mountSuspended(PostList)
+
   expect(component.text()).toContain("First post")
+  await component.get("button").trigger("click")
+  await vi.waitFor(() => expect(component.text()).toContain("Updated post"))
+
+  expect(update).toHaveBeenCalledWith({ id: 1, title: "Updated post" })
+  expect(list).toHaveBeenCalledTimes(2)
 })
 
-/** Never called: a plain object of async functions must still infer procedure composables. */
-export function checkFakeClientTypes() {
-  const query = orpc.blog.posts.list.useQuery()
+/** Never called: the built testing entry must preserve procedure and decorated client types. */
+export function checkTestClientTypes() {
+  const query = client.blog.posts.list.useQuery()
   query.data.value?.[0]?.title satisfies string | undefined
+  procedures.blog.posts.get.handle(async (input) => {
+    input.id satisfies number
+    return { id: input.id, details: { title: "Post" } }
+  })
+  procedures.blog.posts.get.handle((input) => ({
+    // @ts-expect-error The response ID must remain a number in built declarations.
+    id: String(input.id),
+    details: { title: "Post" },
+  }))
+  // @ts-expect-error Router branches expose no registration method.
+  procedures.blog.posts.handle(() => [])
   // @ts-expect-error Router branches expose no query composable.
-  orpc.blog.posts.useQuery()
+  client.blog.posts.useQuery()
 }
