@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.3.1
+
+### Patch Changes
+
+- 7a62794: `createTestORPCClient()` now owns a QueryClient that never retries, exposes it as `queryClient`, and clears it from `reset()`.
+
 ## 0.3.0
 
 ### Minor Changes
