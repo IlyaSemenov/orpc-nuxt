@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.3.0
+
+### Minor Changes
+
+- b83340d: Add the `orpc-nuxt/testing` entrypoint with `createTestORPCClient()`, which creates a fake oRPC client whose procedures register typed handlers and return Vitest mocks.
+
 ## 0.2.0
 
 ### Minor Changes
