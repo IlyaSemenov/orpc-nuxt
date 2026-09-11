@@ -1,6 +1,6 @@
 {
   "name": "orpc-nuxt",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "oRPC integration for Nuxt with TanStack Vue Query composables.",
   "homepage": "https://github.com/IlyaSemenov/orpc-nuxt#readme",
   "bugs": "https://github.com/IlyaSemenov/orpc-nuxt/issues",
