@@ -48,8 +48,9 @@ jobs:
       - name: Test package
         run: bun run test
 
+      # The runner image already carries the shared libraries Chromium needs, so --with-deps would only add unused fonts.
       - name: Install browser for Nuxt integration tests
-        run: bunx playwright install --with-deps chromium
+        run: bunx playwright install chromium-headless-shell
 
       - name: Test packed package with Nuxt
         run: bun run test:nuxt
