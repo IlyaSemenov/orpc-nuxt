@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.4.0
+
+### Minor Changes
+
+- 452be12: Allow the Nuxt plugin helper to create a custom oRPC link with access to the current SSR request event.
+
 ## 0.3.1
 
 ### Patch Changes
