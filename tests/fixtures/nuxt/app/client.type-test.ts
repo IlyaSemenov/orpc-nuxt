@@ -1,3 +1,4 @@
+import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
 import { type QueryClient, skipToken } from "@tanstack/vue-query"
 import { defineNuxtPlugin } from "orpc-nuxt/plugin"
@@ -18,6 +19,24 @@ export function checkPluginOptions() {
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({}))
   // @ts-expect-error Fetch credentials use the standard RequestCredentials values.
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({ url: "/rpc", credentials: "all" }))
+  defineNuxtPlugin<RouterClient<typeof router>>(() => ({
+    link: new RPCLink({ url: "/rpc" }),
+  }))
+  defineNuxtPlugin<RouterClient<typeof router>>(() => ({
+    link: ({ nuxtApp, event }) => {
+      nuxtApp.vueApp.version satisfies string
+      event?.context satisfies Record<string, unknown> | undefined
+      return new RPCLink({
+        origin: event ? "http://ssr.example" : undefined,
+        url: "/rpc",
+      })
+    },
+  }))
+  // @ts-expect-error A custom link replaces the built-in URL transport configuration.
+  defineNuxtPlugin<RouterClient<typeof router>>(() => ({
+    link: new RPCLink({ url: "/rpc" }),
+    url: "/rpc",
+  }))
 }
 
 /**

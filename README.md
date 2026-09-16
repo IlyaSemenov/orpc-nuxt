@@ -289,9 +289,42 @@ Relative URLs resolve against the current request URL during SSR.
 Only headers listed in `forwardHeaders` are forwarded from the incoming SSR request.
 `credentials: "include"` allows browser cookies on cross-origin requests.
 
+### Custom link
+
+Return a custom `link` when the server needs a request-scoped transport while the browser should keep a regular HTTP transport:
+
+```ts
+// app/plugins/orpc.ts
+import { RPCLink } from "@orpc/client/fetch"
+import type { RouterClient } from "@orpc/server"
+import { getRequestURL } from "h3"
+import { defineNuxtPlugin } from "orpc-nuxt/plugin"
+import type { router } from "~~/server/rpc/router"
+
+export default defineNuxtPlugin<RouterClient<typeof router>>(() => ({
+  link: ({ event }) => {
+    if (!event) return new RPCLink({ url: "/api/rpc" })
+
+    const requestFetch = event.context.nuxtMultiApp.createFetch("web")
+    const endpoint = new URL("/api/rpc", getRequestURL(event))
+
+    return new RPCLink({
+      origin: endpoint.origin,
+      url: endpoint.pathname as `/${string}`,
+      fetch: requestFetch,
+    })
+  },
+}))
+```
+
+The link factory receives `{ nuxtApp, event }`, where `event` is the current H3 event during SSR and `undefined` in the browser.
+It runs once per Nuxt application, so every SSR request gets its own link.
+The plugin setup callback has the same lifecycle: once per SSR request and once when the browser app starts.
+`orpc-nuxt` still creates the typed client, decorates it with Vue Query composables, and provides `$orpc`.
+
 ### Manual client setup
 
-Use `createORPCNuxtClient` when you need a custom transport or want SSR to call the router directly.
+Use `createORPCNuxtClient` when you want SSR to call the router directly or need to own the complete client setup.
 Instead of the shared HTTP plugin above, add a browser plugin and a server plugin.
 
 Keep `orpc-nuxt` in `modules`: manual setup replaces that plugin, not the module that installs the QueryClient and the composables.
