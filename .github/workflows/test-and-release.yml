@@ -39,13 +39,13 @@ jobs:
       - name: Install deps
         run: bun install --frozen-lockfile
 
-      - name: Build package
+      - name: Build packages
         run: bun run build
 
-      - name: Typecheck package
+      - name: Typecheck packages
         run: bun run types
 
-      - name: Test package
+      - name: Test packages
         run: bun run test
 
       - name: Test components with Nuxt
@@ -55,26 +55,23 @@ jobs:
       - name: Install browser for Nuxt integration tests
         run: bunx playwright install chromium-headless-shell
 
-      - name: Test packed package with Nuxt
+      - name: Test packed Nuxt integrations
         run: bun run test:nuxt
 
-      - name: Capture release version
+      - name: Capture new release versions
         if: ${{ github.ref == env.MAIN_REF }}
         run: |
-          npx @changesets/cli status --output=release.json
-          RELEASE_VERSION="$(jq -r '.releases[0].newVersion // empty' release.json)"
-          if [ -z "$RELEASE_VERSION" ]; then
-            RELEASE_VERSION="$(jq -r '.version' package.json)"
+          if npx @changesets/cli status --output=release.json; then
+            echo "CHANGED_PACKAGES=$(jq -r '.releases | map(.name + "@" + .newVersion) | join(", ")' release.json)" >> "$GITHUB_ENV"
           fi
-          echo "RELEASE=Version $RELEASE_VERSION" >> "$GITHUB_ENV"
-          rm release.json
+          rm -f release.json
 
       - name: Create Release Pull Request or Publish to npm
         if: ${{ github.ref == env.MAIN_REF }}
         uses: changesets/action@v1
         with:
           publish: npx changeset publish
-          title: ${{ env.RELEASE }}
-          commit: ${{ env.RELEASE }}
+          title: "Release ${{ env.CHANGED_PACKAGES }}"
+          commit: "Release ${{ env.CHANGED_PACKAGES }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

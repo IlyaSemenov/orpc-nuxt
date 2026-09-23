@@ -4,21 +4,21 @@
 
 oRPC integration for Nuxt.
 
-Read [README.md](README.md) completely before changing the public API, package behavior, supported runtimes, or user documentation.
+Read [packages/orpc-nuxt/README.md](packages/orpc-nuxt/README.md) completely before changing the public API, package behavior, supported runtimes, or user documentation.
 
 Extend this guide only with stable, non-obvious conventions, architecture, contracts, workflows, and gotchas.
 Do not catalog files or restate information evident from their names and locations.
 
 ## Scope
 
-- Keep production code in `src/`.
+- Keep production code in each package's `src/`.
 - Keep focused module tests beside their source as `*.test.ts`.
-- Keep runtime integration tests in `tests/runtime/` and source type tests in `tests/types/`.
+- Keep runtime integration tests in each package's `tests/runtime/` and source type tests in its `tests/types/`.
 - Keep Nuxt component tests in the fixture application's `test/nuxt/`, where its generated tsconfig also typechecks them.
 - Name compile-only tests `*.type-test.ts`; keep Nuxt type tests inside the fixture application so they use its generated injections and built package declarations.
 - Keep compile-only checks that reuse a component test's fixtures in that test file rather than a separate `*.type-test.ts`.
-- Keep `src/index.ts` limited to explicit public exports.
-- Treat `package.json` exports and supported runtimes as public contracts.
+- Keep package `src/index.ts` files limited to explicit public exports.
+- Treat package `package.json` exports and supported runtimes as public contracts.
 
 ## Implementation
 
@@ -27,7 +27,7 @@ Do not catalog files or restate information evident from their names and locatio
 - Capture QueryClient during plugin initialization; `.invalidate()` must not require Vue injection at call time.
 - Keep the client entrypoint free of Nuxt runtime imports.
 - Write Nuxt plugin ordering metadata as literals in generated plugin source.
-- Use extensionless relative imports in `src/`.
+- Use extensionless relative imports in package `src/` files.
 
 ## Documentation
 
@@ -46,13 +46,14 @@ Do not catalog files or restate information evident from their names and locatio
 
 - Before the first publication, update `.changeset/initial-release.md` instead of creating additional changesets.
 - After the first publication, add one `.changeset/*.md` file for each independently releasable user-visible change.
+- Include every affected public package and its SemVer bump in the changeset frontmatter.
 - Do not add changesets for internal refactors, maintenance, tests, or documentation changes that do not require a package release.
 - Choose the SemVer bump from the public contract: `patch` for backward-compatible fixes, `minor` for backward-compatible functionality, and `major` for breaking changes.
-- Create `.changeset/<unique-name>.md` with this format:
+- Create `.changeset/<unique-name>.md` with this format, adding a frontmatter entry for every affected public package:
 
 ```markdown
 ---
-"orpc-nuxt": patch
+"<package-name>": patch
 ---
 
 Describe the user-visible change.
@@ -73,6 +74,9 @@ Describe the user-visible change.
   Generate random inputs from an explicit seed and print the seed in failure messages so the failing input can be replayed.
 
 ## Checks
+
+- Run package checks from that package's directory or use root scripts to check every workspace package.
+- Build and publish each package from its own directory.
 
 - Run the `types` script when public types or TypeScript configuration change.
 - Run the `test` script when behavior changes.

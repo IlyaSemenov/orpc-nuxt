@@ -1,97 +1,25 @@
 {
-  "name": "orpc-nuxt",
-  "version": "0.4.0",
-  "description": "oRPC integration for Nuxt with TanStack Vue Query composables.",
-  "homepage": "https://github.com/IlyaSemenov/orpc-nuxt#readme",
-  "bugs": "https://github.com/IlyaSemenov/orpc-nuxt/issues",
-  "license": "MIT",
-  "author": "Ilya Semenov",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/IlyaSemenov/orpc-nuxt.git"
-  },
-  "files": [
-    "README.md",
-    "dist"
+  "name": "rpc-vue-workspace",
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
   "type": "module",
-  "types": "./dist/types.d.mts",
-  "exports": {
-    ".": {
-      "types": "./dist/types.d.mts",
-      "import": "./dist/module.mjs"
-    },
-    "./client": {
-      "types": "./dist/runtime/client.d.ts",
-      "import": "./dist/runtime/client.js"
-    },
-    "./composables": {
-      "types": "./dist/runtime/composables.d.ts",
-      "import": "./dist/runtime/composables.js"
-    },
-    "./plugin": {
-      "types": "./dist/runtime/plugin.d.ts",
-      "import": "./dist/runtime/plugin.js"
-    },
-    "./testing": {
-      "types": "./dist/runtime/testing.d.ts",
-      "import": "./dist/runtime/testing.js"
-    },
-    "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "scripts": {
-    "build": "nuxt-module-build build && publint",
+    "build": "bun run --workspaces --if-present build",
     "lint": "oxlint --fix && oxfmt",
     "lint:check": "oxlint && oxfmt --check",
     "prepare": "lefthook install",
-    "prepublishOnly": "bun run build",
-    "test": "bun test src tests/runtime",
-    "test:component": "vitest run --root tests/fixtures/nuxt",
-    "test:nuxt": "bun tests/nuxt/run.ts",
-    "types": "tsc --noEmit && tsc --noEmit -p tests/tsconfig.json && nuxt typecheck tests/fixtures/nuxt"
-  },
-  "dependencies": {
-    "@nuxt/kit": "^3.14.1592 || ^4.0.1",
-    "devalue": "^5.0.0",
-    "es-toolkit": "^1.52.0"
+    "test": "bun run --workspaces --if-present test",
+    "test:component": "bun run --workspaces --if-present test:component",
+    "test:nuxt": "bun run --workspaces --if-present test:nuxt",
+    "types": "bun run --workspaces --if-present types"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
-    "@nuxt/cli": "^3.37.0",
-    "@nuxt/module-builder": "^1.0.3",
-    "@nuxt/test-utils": "^4.3.2",
-    "@orpc/server": "2.0.0-beta.35",
     "@playwright/test": "1.58.2",
-    "@tsconfig/bun": "^1.0.10",
-    "@types/bun": "^1.3.14",
-    "@vue/server-renderer": "^3.5.0",
-    "@vue/test-utils": "^2.5.0",
-    "happy-dom": "^20.14.3",
-    "nuxt": "^4.5.2",
     "oxfmt": "^0.67.0",
-    "oxlint": "^1.82.0",
-    "publint": "^0.3.22",
-    "typescript": "^5.9.3",
-    "vitest": "^5.0.0",
-    "vue-tsc": "^3.3.11",
-    "zod": "^4.3.6"
-  },
-  "peerDependencies": {
-    "@orpc/client": "^2.0.0-beta.35",
-    "@orpc/tanstack-query": "^2.0.0-beta.35",
-    "@tanstack/vue-query": "^5.102.8",
-    "nuxt": "^3.14.1592 || ^4.0.1",
-    "vitest": "^4.0.0 || ^5.0.0",
-    "vue": "^3.5.0"
-  },
-  "peerDependenciesMeta": {
-    "vitest": {
-      "optional": true
-    }
+    "oxlint": "^1.82.0"
   },
   "packageManager": "bun@1.3.14"
 }

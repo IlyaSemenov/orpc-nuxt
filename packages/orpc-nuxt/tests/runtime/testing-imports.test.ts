@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url"
 
 import { expect, test } from "vitest"
 
-const projectRoot = fileURLToPath(new URL("../..", import.meta.url))
-const testingEntry = resolve(projectRoot, "src/runtime/testing.ts")
+const packageRoot = fileURLToPath(new URL("../..", import.meta.url))
+const testingEntry = resolve(packageRoot, "src/runtime/testing.ts")
 
 test("keeps the testing entry's package import graph free of Nuxt runtime imports", async () => {
   // Scan source so the regular test command does not depend on a preceding package build.
@@ -43,9 +43,9 @@ function resolvePackageImport(importer: string, specifier: string) {
   if (specifier.startsWith(".")) {
     imported = resolve(dirname(importer), specifier)
   } else if (specifier.startsWith("orpc-nuxt/")) {
-    imported = resolve(projectRoot, "src/runtime", specifier.slice("orpc-nuxt/".length))
+    imported = resolve(packageRoot, "src/runtime", specifier.slice("orpc-nuxt/".length))
   } else if (specifier === "orpc-nuxt") {
-    imported = resolve(projectRoot, "src/module")
+    imported = resolve(packageRoot, "src/module")
   } else {
     return undefined
   }

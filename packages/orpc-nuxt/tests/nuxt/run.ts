@@ -7,8 +7,8 @@ import nuxtPkg from "nuxt/package.json"
 
 import pkg from "../../package.json"
 
-const root = resolve(import.meta.dir, "../..")
-const fixture = join(root, "tests/fixtures/nuxt")
+const packageRoot = resolve(import.meta.dir, "../..")
+const fixture = join(packageRoot, "tests/fixtures/nuxt")
 
 const args = process.argv.slice(2)
 const devOnly = args.includes("--dev")
@@ -81,7 +81,7 @@ async function checkBrowser(
       if (Date.now() >= deadline) throw new Error("Nuxt server did not become ready")
       await Bun.sleep(100)
     }
-    await run(["bun", "run", "playwright", "test"], root, {
+    await run(["bun", "run", "playwright", "test"], packageRoot, {
       ...env,
       ORPC_TEST_URL: baseURL,
     })
@@ -94,7 +94,10 @@ async function checkBrowser(
 try {
   // Test the publishable archive, not file:directory, which can bring along the package's dev deps.
   const archive = join(workspace, "orpc-nuxt.tgz")
-  await run(["bun", "pm", "pack", "--ignore-scripts", "--quiet", "--filename", archive], root)
+  await run(
+    ["bun", "pm", "pack", "--ignore-scripts", "--quiet", "--filename", archive],
+    packageRoot,
+  )
 
   const scenarios = versions.flatMap((version) =>
     ["module", "custom"].map((owner) => ({ version, owner })),

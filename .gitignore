@@ -3,5 +3,5 @@
 **/.nuxtrc
 **/.output/
 
-/dist/
-/test-results/
+**/dist/
+**/test-results/
