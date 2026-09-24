@@ -4,7 +4,7 @@ import { type Client, ORPCError } from "@orpc/client"
 import { QueryClient } from "@tanstack/vue-query"
 
 import { catchORPCError } from "./client/error"
-import { createORPCError, createTestORPCClient } from "./testing"
+import { createTestORPCClient } from "./testing"
 
 interface Post {
   id: number
@@ -95,8 +95,11 @@ describe("test oRPC client", () => {
 
   test("creates a declared error handled by the client helper", async () => {
     const { client, procedures } = setup()
-    procedures.blog.posts.update.handle(() => {
-      throw createORPCError("CONFLICT", "Already exists", { field: "title" })
+    const update = procedures.blog.posts.update.handle((input, { errors }) => {
+      if (input.title === "Duplicate") {
+        throw errors.CONFLICT({ message: "Already exists", data: { field: "title" } })
+      }
+      return { id: input.id, title: input.title }
     })
 
     await expect(
@@ -104,5 +107,6 @@ describe("test oRPC client", () => {
         CONFLICT: (error) => error.data.field,
       }),
     ).resolves.toBe("title")
+    expect(update.mock.calls).toEqual([[{ id: 1, title: "Duplicate" }]])
   })
 })

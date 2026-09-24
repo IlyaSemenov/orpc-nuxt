@@ -557,18 +557,19 @@ test("renders the posts", async () => {
 })
 ```
 
-Use `createORPCError()` when a fake procedure must reproduce a declared rejection:
+The second handler argument provides typed error constructors derived from that procedure's `.errors()` map:
 
 ```ts
-import { createORPCError } from "orpc-nuxt/testing"
-
-procedures.blog.posts.update.handle(() => {
-  throw createORPCError("CONFLICT", "Already exists", { field: "title" })
+procedures.blog.posts.update.handle((input, { errors }) => {
+  if (input.title === "taken") {
+    throw errors.CONFLICT({
+      message: "Already exists",
+      data: { field: "title" },
+    })
+  }
+  return { id: 1, ...input }
 })
 ```
-
-Because this helper is standalone, it cannot infer which fake procedure will throw the error.
-Its code and data are therefore not checked against that procedure's `.errors()` map.
 
 ### Outside Vue components
 

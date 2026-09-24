@@ -1,12 +1,11 @@
 import type {
+  AnyORPCError,
   AnyNestedClient,
   Client,
   ClientLink,
   InferClientContext,
-  ORPCError,
-  ORPCErrorCode,
 } from "@orpc/client"
-import { createORPCClient, createORPCErrorFromJson } from "@orpc/client"
+import { createORPCClient, createORPCErrorFromJson, ORPCError } from "@orpc/client"
 import { QueryClient } from "@tanstack/vue-query"
 import type { Mock } from "vitest"
 import { vi } from "vitest"
@@ -15,46 +14,48 @@ import { createORPCNuxtClient } from "./client/create"
 import type { ORPCNuxtClient, ORPCNuxtClientOptions } from "./types"
 
 type MaybePromise<T> = T | Promise<T>
-type RuntimeHandler = (input: unknown) => unknown
+type RuntimeHandlerOptions = {
+  errors: Record<string, (options?: RuntimeErrorOptions) => AnyORPCError>
+}
+type RuntimeHandler = (input: unknown, options: RuntimeHandlerOptions) => unknown
+type RegisteredHandler = (input: unknown) => unknown
+type RuntimeErrorOptions = ErrorOptions & { message?: string; data?: unknown }
 
-/**
- * Create an oRPC error marked as declared for a fake client procedure.
- * The standalone helper cannot infer a specific procedure, so its code is not limited to that procedure's `.errors()` map.
- *
- * @param code - The error code exposed to the client.
- * @param message - The human-readable error message.
- * @returns An error that `isDefinedError()` and `catchORPCError()` recognize as declared.
- */
-export function createORPCError<Code extends ORPCErrorCode>(
-  code: Code,
-  message: string,
-): ORPCError<Code, undefined>
+type ProcedureError<TProcedure> =
+  TProcedure extends Client<any, any, any, infer Error> ? Extract<Error, AnyORPCError> : never
 
-/**
- * Create an oRPC error with typed data marked as declared for a fake client procedure.
- * The standalone helper cannot infer a specific procedure, so its code and data are not checked against that procedure's `.errors()` map.
- *
- * @param code - The error code exposed to the client.
- * @param message - The human-readable error message.
- * @param data - Error data exposed to the client.
- * @returns An error that `isDefinedError()` and `catchORPCError()` recognize as declared.
- */
-export function createORPCError<Code extends ORPCErrorCode, Data>(
-  code: Code,
-  message: string,
-  data: Data,
-): ORPCError<Code, Data>
+type ErrorConstructorOptions<Data> = ErrorOptions & { message?: string } & (undefined extends Data
+    ? { data?: Data }
+    : { data: Data })
 
-export function createORPCError<Code extends ORPCErrorCode, Data>(
-  code: Code,
-  message: string,
-  data?: Data,
-): ORPCError<Code, Data | undefined> {
-  return createORPCErrorFromJson({ defined: true, code, message, data })
+type ErrorConstructor<ErrorType extends AnyORPCError> =
+  ErrorType extends ORPCError<infer _Code, infer Data>
+    ? (
+        ...args: undefined extends Data
+          ? [options?: ErrorConstructorOptions<Data>]
+          : [options: ErrorConstructorOptions<Data>]
+      ) => ErrorType
+    : never
+
+type TestORPCErrors<TProcedure> = {
+  [Code in ProcedureError<TProcedure>["code"] & string]: ErrorConstructor<
+    Extract<ProcedureError<TProcedure>, { code: Code }>
+  >
+}
+
+/** Error constructors derived from the procedure's declared error union. */
+export interface TestORPCHandlerOptions<TProcedure> {
+  /** Construct an error declared by this procedure, with its corresponding data type. */
+  errors: TestORPCErrors<TProcedure>
 }
 
 /** A procedure implementation registered for a test client. */
 export type TestORPCHandler<TProcedure> =
+  TProcedure extends Client<infer _Context, infer Input, infer Output, infer _Error>
+    ? (input: Input, options: TestORPCHandlerOptions<TProcedure>) => MaybePromise<Awaited<Output>>
+    : never
+
+type TestORPCMockHandler<TProcedure> =
   TProcedure extends Client<infer _Context, infer Input, infer Output, infer _Error>
     ? (input: Input) => MaybePromise<Awaited<Output>>
     : never
@@ -62,7 +63,7 @@ export type TestORPCHandler<TProcedure> =
 /** Registration methods for one procedure in a test client. */
 export interface TestORPCProcedure<TProcedure> {
   /** Register the implementation used by subsequent calls and return its Vitest mock. */
-  handle(handler: TestORPCHandler<TProcedure>): Mock<TestORPCHandler<TProcedure>>
+  handle(handler: TestORPCHandler<TProcedure>): Mock<TestORPCMockHandler<TProcedure>>
 }
 
 /** A router-shaped tree whose procedure leaves register test implementations. */
@@ -99,7 +100,7 @@ export interface TestORPCClient<T extends AnyNestedClient> {
 export function createTestORPCClient<T extends AnyNestedClient>(
   options: ORPCNuxtClientOptions = {},
 ): TestORPCClient<T> {
-  const registrations = new Map<string, Mock<RuntimeHandler>>()
+  const registrations = new Map<string, Mock<RegisteredHandler>>()
   const queryClient =
     options.queryClient ??
     new QueryClient({
@@ -111,7 +112,9 @@ export function createTestORPCClient<T extends AnyNestedClient>(
 
   /** Register one handler without sharing state with another factory instance. */
   function registerHandler(path: string, handler: RuntimeHandler) {
-    const mock = vi.fn(handler)
+    const options = { errors: createErrorConstructors() }
+    // Keep the public mock's call tuples limited to procedure input while the implementation gets helpers.
+    const mock = vi.fn((input: unknown) => handler(input, options))
     registrations.set(path, mock)
     return mock
   }
@@ -153,6 +156,26 @@ export function createTestORPCClient<T extends AnyNestedClient>(
       queryClient.clear()
     },
   }
+}
+
+/** Create lazy error constructors without requiring the procedure's runtime contract. */
+function createErrorConstructors(): RuntimeHandlerOptions["errors"] {
+  const constructors = new Map<string, (options?: RuntimeErrorOptions) => AnyORPCError>()
+
+  return new Proxy(Object.create(null) as RuntimeHandlerOptions["errors"], {
+    get(target, property, receiver) {
+      if (typeof property !== "string") return Reflect.get(target, property, receiver)
+      const cached = constructors.get(property)
+      if (cached) return cached
+
+      const constructor = (options?: RuntimeErrorOptions) => {
+        const error = new ORPCError(property, options)
+        return createORPCErrorFromJson({ ...error.toJSON(), defined: true }, { cause: error.cause })
+      }
+      constructors.set(property, constructor)
+      return constructor
+    },
+  })
 }
 
 /** Build the registration tree lazily because an oRPC client does not expose router keys. */

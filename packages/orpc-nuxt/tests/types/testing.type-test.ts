@@ -1,6 +1,6 @@
-import type { Client } from "@orpc/client"
+import type { Client, ORPCError } from "@orpc/client"
 
-import { createORPCError, createTestORPCClient } from "../../src/runtime/testing"
+import { createTestORPCClient } from "../../src/runtime/testing"
 
 type AppClient = {
   admin: {
@@ -9,7 +9,7 @@ type AppClient = {
         { token: string },
         { id: number },
         { id: number; title: string },
-        { code: "MISSING" }
+        ORPCError<"MISSING", { id: number }> | Error
       >
     }
   }
@@ -17,10 +17,19 @@ type AppClient = {
 
 const { client, procedures } = createTestORPCClient<AppClient>()
 
-procedures.admin.posts.get.handle(async (input) => {
+procedures.admin.posts.get.handle(async (input, { errors }) => {
   input.id satisfies number
   // @ts-expect-error The handler input retains the procedure input type.
   input.id satisfies string
+  const missing = errors.MISSING({ data: { id: input.id } })
+  missing.code satisfies "MISSING"
+  missing.data.id satisfies number
+  // @ts-expect-error The procedure does not declare this error code.
+  errors.CONFLICT()
+  // @ts-expect-error Data is required by the declared error.
+  errors.MISSING()
+  // @ts-expect-error Error data retains its declared shape.
+  errors.MISSING({ data: { id: "wrong" } })
   return { id: input.id, title: "Post" }
 })
 // @ts-expect-error The handler result must match the awaited procedure output.
@@ -31,10 +40,6 @@ procedures.admin.posts.handle(() => ({ id: 1, title: "Post" }))
 procedures.admin.posts.missing.handle(() => ({ id: 1, title: "Post" }))
 
 const query = client.admin.posts.get.useQuery({ id: 1 }, { context: { token: "secret" } })
-query.error.value satisfies { code: "MISSING" } | null
+query.error.value satisfies ORPCError<"MISSING", { id: number }> | Error | null
 // @ts-expect-error Client context remains required on the decorated fake client.
 client.admin.posts.get.useQuery({ id: 1 })
-
-const error = createORPCError("MISSING", "Missing post", { id: 1 })
-error.code satisfies "MISSING"
-error.data.id satisfies number
