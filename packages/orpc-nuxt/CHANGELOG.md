@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.6.0
+
+### Minor Changes
+
+- c9f3b56: Replace the standalone test error helper with procedure-typed `errors` constructors in test handlers.
+
 ## 0.5.0
 
 ### Minor Changes
