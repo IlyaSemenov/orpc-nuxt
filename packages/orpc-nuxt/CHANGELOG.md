@@ -1,5 +1,11 @@
 # orpc-nuxt
 
+## 0.7.0
+
+### Minor Changes
+
+- ce879f0: Add `.callCatching()` to procedures for calling them and handling declared errors in one step.
+
 ## 0.6.0
 
 ### Minor Changes
