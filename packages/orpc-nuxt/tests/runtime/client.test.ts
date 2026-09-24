@@ -61,6 +61,9 @@ function setup() {
     fail: os.handler(() => {
       throw new ORPCError("NOT_FOUND", { message: "Missing" })
     }),
+    missing: os.errors({ NOT_FOUND: {} }).handler(({ errors }) => {
+      throw errors.NOT_FOUND()
+    }),
     // Exercise collisions with both upstream utility names and the added composable names.
     queryOptions: { nested: os.handler(() => "collision") },
     useQuery: { nested: os.handler(() => "query namespace") },
@@ -376,5 +379,38 @@ describe("query and mutation client", () => {
     expect(signal?.aborted).toBe(false)
     otherScope.stop()
     expect(signal?.aborted).toBe(true)
+  })
+})
+
+describe("callCatching", () => {
+  test("returns the output or the matching declared error result", async () => {
+    const { orpc } = setup()
+    expect(await orpc.item.get.callCatching({ id: 1 }, {})).toHaveProperty("id", 1)
+    expect(await orpc.missing.callCatching(undefined, { NOT_FOUND: null })).toBeNull()
+    expect(await orpc.missing.callCatching(undefined, { NOT_FOUND: (error) => error.code })).toBe(
+      "NOT_FOUND",
+    )
+  })
+
+  test("rethrows undeclared errors", async () => {
+    const { orpc } = setup()
+    await expect(orpc.fail.callCatching(undefined, {})).rejects.toBeInstanceOf(ORPCError)
+  })
+
+  test("forwards input and call options", async () => {
+    const { queryClient } = setup()
+    const calls: unknown[] = []
+    const raw = createORPCClient<{
+      get: Client<{ token: string }, { id: number }, string, Error>
+    }>({
+      async call(path, input, options) {
+        calls.push({ path, input, context: options.context })
+        return "result"
+      },
+    })
+    const orpc = createORPCNuxtClient(raw, { queryClient })
+    const result = await orpc.get.callCatching({ id: 1 }, {}, { context: { token: "token" } })
+    expect(result).toBe("result")
+    expect(calls).toEqual([{ path: ["get"], input: { id: 1 }, context: { token: "token" } }])
   })
 })

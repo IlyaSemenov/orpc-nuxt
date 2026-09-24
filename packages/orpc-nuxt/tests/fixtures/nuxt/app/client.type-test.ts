@@ -140,6 +140,13 @@ export async function checkNestedClientTypes() {
     // @ts-expect-error Direct calls retain their declared error codes after declaration emission.
     FORBIDDEN: undefined,
   })
+  const caught = await injected.blog.posts.update.callCatching(
+    { id: 1, title: "updated" },
+    { NOT_FOUND: null },
+  )
+  caught satisfies { id: number; details: { title: string } } | null
+  // @ts-expect-error callCatching retains declared error codes after declaration emission.
+  injected.blog.posts.update.callCatching({ id: 1, title: "updated" }, { FORBIDDEN: null })
 
   const deep = await orpc.blog.admin.comments.get.useQuery({ id: 1 })
   deep.data.value?.details.title satisfies string | undefined

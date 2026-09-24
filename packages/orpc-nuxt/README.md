@@ -173,15 +173,10 @@ const post = await orpc.blog.posts.get.call({ id: 1 })
 
 ### Declared errors
 
-Treat an expected rejection as an application outcome only when the procedure declares it with `.errors()`.
-Let every other error propagate to the application's error handler, including an `ORPCError` whose code was not declared by that procedure.
-
-Use `catchORPCError()` from the client entrypoint to handle selected declared errors while preserving their code and data types:
+Use `.callCatching()` to call a procedure and handle errors it declares with `.errors()`, with their code and data types:
 
 ```ts
-import { catchORPCError } from "orpc-nuxt/client"
-
-const post = await catchORPCError(orpc.blog.posts.update.call(input), {
+const post = await orpc.blog.posts.update.callCatching(input, {
   CONFLICT: (error) => {
     message.value = error.message
     conflictingField.value = error.data.field
@@ -196,15 +191,25 @@ Undeclared errors and declared codes without a handler are rethrown unchanged.
 When one declared error simply means there is no result, map it to `undefined` or `null` directly:
 
 ```ts
-import { catchORPCError } from "orpc-nuxt/client"
-
-const post = await catchORPCError(orpc.blog.posts.get.call({ id }), {
-  NOT_FOUND: null,
-})
+const post = await orpc.blog.posts.get.callCatching({ id }, { NOT_FOUND: null })
 // post is the procedure output or null.
 ```
 
-The client also exposes oRPC's utilities:
+Pass call options such as `context` or `signal` as the third argument.
+Pass `undefined` as input for procedures without input.
+
+`.callCatching()` is built on `catchORPCError()`, which handles errors of a promise returned directly by any typed oRPC client call.
+Import it from the client entrypoint when you do not call the procedure through this package's client:
+
+```ts
+import { catchORPCError } from "orpc-nuxt/client"
+
+const post = await catchORPCError(client.blog.posts.get({ id }), { NOT_FOUND: null })
+```
+
+### oRPC utilities
+
+The client also exposes oRPC's TanStack Query utilities:
 
 - `.key()` builds a cache key prefix for a procedure or router branch.
 - `.queryKey()` builds a query key for a specific input.

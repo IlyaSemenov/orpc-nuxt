@@ -86,6 +86,41 @@ async function definedErrorInference() {
   void invalidPromiseCode
 }
 
+/** Verify callCatching applies catchORPCError's handler typing to the procedure call. */
+async function callCatchingInference() {
+  const orpc = createORPCNuxtClient(createRouterClient(router))
+
+  const handled = await orpc.update.callCatching(
+    { id: 1 },
+    {
+      CONFLICT: (error) => {
+        error.code satisfies "CONFLICT"
+        error.data.field satisfies string
+        return 409 as const
+      },
+      NOT_FOUND: null,
+    },
+  )
+  handled satisfies { id: number; title: string } | 409 | null
+  // @ts-expect-error Handled results remain in the result union.
+  handled satisfies { id: number; title: string }
+
+  const withOptions = await orpc.update.callCatching(
+    { id: 1 },
+    { NOT_FOUND: undefined },
+    { signal: new AbortController().signal },
+  )
+  withOptions satisfies { id: number; title: string } | undefined
+
+  // @ts-expect-error Handler codes are limited to declared errors.
+  orpc.update.callCatching({ id: 1 }, { FORBIDDEN: null })
+  // @ts-expect-error Input is validated against the procedure schema.
+  orpc.update.callCatching({ id: "1" }, {})
+  // @ts-expect-error Input must be passed explicitly before handlers.
+  orpc.update.callCatching({ NOT_FOUND: null })
+  ;(await orpc.ping.callCatching(undefined, {})) satisfies string
+}
+
 // Reuse the same leaves at different depths so recursion cannot silently stop after one level.
 const router = {
   ...procedures,
@@ -282,6 +317,9 @@ function contextInference(raw: {
       return { token: "token" }
     },
   })
+  // @ts-expect-error Required client context also applies to callCatching.
+  orpc.get.callCatching(undefined, {})
+  orpc.get.callCatching(undefined, {}, { context: { token: "token" } })
 
   const query = orpc.blog.posts.get.useQuery(
     { id: 1 },

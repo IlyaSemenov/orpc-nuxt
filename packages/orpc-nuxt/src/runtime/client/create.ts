@@ -7,6 +7,7 @@ import { useORPCMutation } from "../vue-query/mutation"
 import { useORPCQuery } from "../vue-query/query"
 import { resolveQueryClient } from "../vue-query/query-client"
 import { decorateClient } from "./decorate"
+import { catchDefinedErrors } from "./error"
 
 /**
  * Add reactive query and mutation composables while preserving oRPC's TanStack utilities.
@@ -38,6 +39,10 @@ export function createORPCNuxtClient<T extends AnyNestedClient>(
       },
       useMutation(mutationOptions: unknown) {
         return useORPCMutation(target, mutationOptions, getQueryClient())
+      },
+      callCatching(input: unknown, handlers: Record<string, unknown>, callOptions: unknown) {
+        const utils = target as { call: (input: unknown, options: unknown) => Promise<unknown> }
+        return catchDefinedErrors(utils.call(input, callOptions), handlers)
       },
       invalidate() {
         const utils = target as { key: () => QueryKey }

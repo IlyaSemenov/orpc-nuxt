@@ -1,4 +1,4 @@
-import type { AnyNestedClient, Client, ClientContext } from "@orpc/client"
+import type { AnyNestedClient, Client, ClientContext, FriendlyClientOptions } from "@orpc/client"
 import type { RouterUtils } from "@orpc/tanstack-query"
 import type {
   QueryClient,
@@ -10,6 +10,8 @@ import type {
 } from "@tanstack/vue-query"
 import type { ComputedRef, DeepReadonly, MaybeRefOrGetter, Ref, WritableComputedRef } from "vue"
 
+import type { DefinedErrorCode, DefinedErrorHandlers, HandledResult } from "./client/error"
+
 /** Configure cache ownership and key namespacing when wrapping an application-owned client. */
 export interface ORPCNuxtClientOptions {
   /** Separate the cache keys of clients whose procedure paths overlap. */
@@ -20,7 +22,8 @@ export interface ORPCNuxtClientOptions {
 
 /**
  * An oRPC client decorated with Vue composables and the official TanStack Query utilities.
- * Router branches retain their names; finite procedures gain query and mutation composables.
+ * Router branches retain their names; finite procedures gain query and mutation composables
+ * and `callCatching()`.
  * Procedures whose output includes an async iterable retain only the upstream utilities.
  */
 export type ORPCNuxtClient<T extends AnyNestedClient> = RouterUtils<T> & {
@@ -135,4 +138,15 @@ interface ProcedureHooks<C extends ClientContext, I, O, E> {
       ? [options?: MaybeRefOrGetter<ORPCMutationOptions<C, I, O, E, M>>]
       : [options: MaybeRefOrGetter<ORPCMutationOptions<C, I, O, E, M>>]
   ): UseMutationReturnType<O, E, I, M>
+  /**
+   * Call the procedure and handle selected declared errors like `catchORPCError()`.
+   * Pass `undefined` as input for procedures without input.
+   */
+  callCatching<Handlers extends object & DefinedErrorHandlers<E>>(
+    input: I,
+    handlers: Handlers & Record<Exclude<keyof Handlers, DefinedErrorCode<E>>, never>,
+    ...rest: object extends C
+      ? [options?: FriendlyClientOptions<C>]
+      : [options: FriendlyClientOptions<C>]
+  ): Promise<O | HandledResult<Handlers>>
 }
