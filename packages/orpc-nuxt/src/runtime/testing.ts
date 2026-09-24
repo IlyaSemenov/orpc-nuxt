@@ -1,5 +1,12 @@
-import type { AnyNestedClient, Client, ClientLink, InferClientContext } from "@orpc/client"
-import { createORPCClient } from "@orpc/client"
+import type {
+  AnyNestedClient,
+  Client,
+  ClientLink,
+  InferClientContext,
+  ORPCError,
+  ORPCErrorCode,
+} from "@orpc/client"
+import { createORPCClient, createORPCErrorFromJson } from "@orpc/client"
 import { QueryClient } from "@tanstack/vue-query"
 import type { Mock } from "vitest"
 import { vi } from "vitest"
@@ -9,6 +16,42 @@ import type { ORPCNuxtClient, ORPCNuxtClientOptions } from "./types"
 
 type MaybePromise<T> = T | Promise<T>
 type RuntimeHandler = (input: unknown) => unknown
+
+/**
+ * Create an oRPC error marked as declared for a fake client procedure.
+ * The standalone helper cannot infer a specific procedure, so its code is not limited to that procedure's `.errors()` map.
+ *
+ * @param code - The error code exposed to the client.
+ * @param message - The human-readable error message.
+ * @returns An error that `isDefinedError()` and `catchORPCError()` recognize as declared.
+ */
+export function createORPCError<Code extends ORPCErrorCode>(
+  code: Code,
+  message: string,
+): ORPCError<Code, undefined>
+
+/**
+ * Create an oRPC error with typed data marked as declared for a fake client procedure.
+ * The standalone helper cannot infer a specific procedure, so its code and data are not checked against that procedure's `.errors()` map.
+ *
+ * @param code - The error code exposed to the client.
+ * @param message - The human-readable error message.
+ * @param data - Error data exposed to the client.
+ * @returns An error that `isDefinedError()` and `catchORPCError()` recognize as declared.
+ */
+export function createORPCError<Code extends ORPCErrorCode, Data>(
+  code: Code,
+  message: string,
+  data: Data,
+): ORPCError<Code, Data>
+
+export function createORPCError<Code extends ORPCErrorCode, Data>(
+  code: Code,
+  message: string,
+  data?: Data,
+): ORPCError<Code, Data | undefined> {
+  return createORPCErrorFromJson({ defined: true, code, message, data })
+}
 
 /** A procedure implementation registered for a test client. */
 export type TestORPCHandler<TProcedure> =

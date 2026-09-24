@@ -171,6 +171,39 @@ Use `.call()` when you just need a procedure's response, without query state or 
 const post = await orpc.blog.posts.get.call({ id: 1 })
 ```
 
+### Declared errors
+
+Treat an expected rejection as an application outcome only when the procedure declares it with `.errors()`.
+Let every other error propagate to the application's error handler, including an `ORPCError` whose code was not declared by that procedure.
+
+Use `catchORPCError()` from the client entrypoint to handle selected declared errors while preserving their code and data types:
+
+```ts
+import { catchORPCError } from "orpc-nuxt/client"
+
+const post = await catchORPCError(orpc.blog.posts.update.call(input), {
+  CONFLICT: (error) => {
+    message.value = error.message
+    conflictingField.value = error.data.field
+  },
+  NOT_FOUND: () => navigateTo("/posts"),
+})
+```
+
+The successful output, matching handler's awaited result, or matching non-function value becomes the call result.
+Undeclared errors and declared codes without a handler are rethrown unchanged.
+
+When one declared error simply means there is no result, map it to `undefined` or `null` directly:
+
+```ts
+import { catchORPCError } from "orpc-nuxt/client"
+
+const post = await catchORPCError(orpc.blog.posts.get.call({ id }), {
+  NOT_FOUND: null,
+})
+// post is the procedure output or null.
+```
+
 The client also exposes oRPC's utilities:
 
 - `.key()` builds a cache key prefix for a procedure or router branch.
@@ -523,6 +556,19 @@ test("renders the posts", async () => {
   expect(list).toHaveBeenCalledOnce()
 })
 ```
+
+Use `createORPCError()` when a fake procedure must reproduce a declared rejection:
+
+```ts
+import { createORPCError } from "orpc-nuxt/testing"
+
+procedures.blog.posts.update.handle(() => {
+  throw createORPCError("CONFLICT", "Already exists", { field: "title" })
+})
+```
+
+Because this helper is standalone, it cannot infer which fake procedure will throw the error.
+Its code and data are therefore not checked against that procedure's `.errors()` map.
 
 ### Outside Vue components
 

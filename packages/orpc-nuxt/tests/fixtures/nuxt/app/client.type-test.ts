@@ -1,6 +1,7 @@
 import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
 import { type QueryClient, skipToken } from "@tanstack/vue-query"
+import { catchORPCError } from "orpc-nuxt/client"
 import { defineNuxtPlugin } from "orpc-nuxt/plugin"
 import { reactive, ref } from "vue"
 
@@ -122,6 +123,23 @@ export async function checkNestedClientTypes() {
   updated.details.title satisfies number
   // @ts-expect-error Nested mutations reject missing required fields.
   mutation.mutate({ id: 1 })
+
+  const handled = await catchORPCError(
+    injected.blog.posts.update.call({ id: 1, title: "updated" }),
+    {
+      CONFLICT: (error) => {
+        error.code satisfies "CONFLICT"
+        error.data.field satisfies string
+        return 409 as const
+      },
+      NOT_FOUND: null,
+    },
+  )
+  handled satisfies { id: number; details: { title: string } } | 409 | null
+  catchORPCError(injected.blog.posts.update.call({ id: 1, title: "updated" }), {
+    // @ts-expect-error Direct calls retain their declared error codes after declaration emission.
+    FORBIDDEN: undefined,
+  })
 
   const deep = await orpc.blog.admin.comments.get.useQuery({ id: 1 })
   deep.data.value?.details.title satisfies string | undefined

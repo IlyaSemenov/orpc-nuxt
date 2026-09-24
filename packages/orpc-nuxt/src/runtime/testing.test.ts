@@ -3,7 +3,8 @@ import { describe, expect, test } from "bun:test"
 import { type Client, ORPCError } from "@orpc/client"
 import { QueryClient } from "@tanstack/vue-query"
 
-import { createTestORPCClient } from "./testing"
+import { catchORPCError } from "./client/error"
+import { createORPCError, createTestORPCClient } from "./testing"
 
 interface Post {
   id: number
@@ -14,7 +15,12 @@ type AppClient = {
   blog: {
     posts: {
       list: Client<Record<never, never>, undefined, Post[], unknown>
-      update: Client<Record<never, never>, { id: number; title: string }, Post, unknown>
+      update: Client<
+        Record<never, never>,
+        { id: number; title: string },
+        Post,
+        ORPCError<"CONFLICT", { field: string }> | Error
+      >
       fail: Client<Record<never, never>, undefined, never, unknown>
     }
   }
@@ -85,5 +91,18 @@ describe("test oRPC client", () => {
     })
 
     await expect(client.blog.posts.fail.call()).rejects.toBe(error)
+  })
+
+  test("creates a declared error handled by the client helper", async () => {
+    const { client, procedures } = setup()
+    procedures.blog.posts.update.handle(() => {
+      throw createORPCError("CONFLICT", "Already exists", { field: "title" })
+    })
+
+    await expect(
+      catchORPCError(client.blog.posts.update.call({ id: 1, title: "Duplicate" }), {
+        CONFLICT: (error) => error.data.field,
+      }),
+    ).resolves.toBe("title")
   })
 })

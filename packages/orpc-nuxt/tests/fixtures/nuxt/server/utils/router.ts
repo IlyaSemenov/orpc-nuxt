@@ -18,6 +18,12 @@ const posts = {
       }
     }),
   update: os
+    .errors({
+      CONFLICT: {
+        data: z.object({ field: z.string() }),
+      },
+      NOT_FOUND: {},
+    })
     .input(
       z.object({
         id: z.number(),

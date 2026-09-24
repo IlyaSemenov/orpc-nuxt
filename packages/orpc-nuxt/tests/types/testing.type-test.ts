@@ -1,6 +1,6 @@
 import type { Client } from "@orpc/client"
 
-import { createTestORPCClient } from "../../src/runtime/testing"
+import { createORPCError, createTestORPCClient } from "../../src/runtime/testing"
 
 type AppClient = {
   admin: {
@@ -34,3 +34,7 @@ const query = client.admin.posts.get.useQuery({ id: 1 }, { context: { token: "se
 query.error.value satisfies { code: "MISSING" } | null
 // @ts-expect-error Client context remains required on the decorated fake client.
 client.admin.posts.get.useQuery({ id: 1 })
+
+const error = createORPCError("MISSING", "Missing post", { id: 1 })
+error.code satisfies "MISSING"
+error.data.id satisfies number

@@ -1,7 +1,7 @@
-import type { Client } from "@orpc/client"
+import type { Client, ORPCError, PromiseWithError } from "@orpc/client"
 import { createRouterClient, os } from "@orpc/server"
 import { QueryClient, skipToken } from "@tanstack/vue-query"
-import { createORPCNuxtClient } from "orpc-nuxt/client"
+import { catchORPCError, createORPCNuxtClient } from "orpc-nuxt/client"
 import { reactive, ref } from "vue"
 import * as z from "zod"
 
@@ -19,9 +19,71 @@ const procedures = {
       }
     }),
   ping: os.handler(() => "pong"),
+  update: os
+    .errors({
+      CONFLICT: {
+        data: z.object({ field: z.string() }),
+      },
+      NOT_FOUND: {},
+    })
+    .input(z.object({ id: z.number() }))
+    .handler(({ input }) => ({ id: input.id, title: "Updated" })),
   stream: os.handler(async function* () {
     yield "event"
   }),
+}
+
+/** Verify direct calls retain declared errors through the Nuxt client decorator. */
+async function definedErrorInference() {
+  const orpc = createORPCNuxtClient(createRouterClient(router))
+  const promise = orpc.update.call({ id: 1 })
+  type PromiseError = typeof promise extends { __error?: { type: infer Error } } ? Error : never
+  type PromiseCode = Extract<PromiseError, ORPCError<string, unknown>>["code"]
+  // @ts-expect-error The phantom error union contains only declared literal codes.
+  const invalidPromiseCode: PromiseCode = "FORBIDDEN"
+  promise satisfies PromiseWithError<
+    { id: number; title: string },
+    ORPCError<"CONFLICT", { field: string }> | ORPCError<"NOT_FOUND", unknown> | Error
+  >
+
+  const handled = await catchORPCError(promise, {
+    CONFLICT: (error) => {
+      error.code satisfies "CONFLICT"
+      error.data.field satisfies string
+      // @ts-expect-error The handler receives only the matching error branch.
+      error.code satisfies "NOT_FOUND"
+      // @ts-expect-error Error data retains its schema-derived shape.
+      error.data.missing
+      return 409 as const
+    },
+    NOT_FOUND: async (error) => {
+      error.code satisfies "NOT_FOUND"
+      return "redirect" as const
+    },
+  })
+  handled satisfies { id: number; title: string } | 409 | "redirect"
+
+  const absent = await catchORPCError(orpc.update.call({ id: 1 }), {
+    NOT_FOUND: undefined,
+  })
+  absent satisfies { id: number; title: string } | undefined
+
+  const nullable = await catchORPCError(orpc.update.call({ id: 1 }), {
+    CONFLICT: false,
+    NOT_FOUND: null,
+  })
+  nullable satisfies { id: number; title: string } | false | null
+
+  const fallback = await catchORPCError(orpc.update.call({ id: 1 }), {
+    NOT_FOUND: { missing: true as const },
+  })
+  fallback satisfies { id: number; title: string } | { missing: true }
+
+  // @ts-expect-error Handler keys are limited to the procedure's declared error codes.
+  catchORPCError(orpc.update.call({ id: 1 }), { FORBIDDEN: () => undefined })
+  // @ts-expect-error A plain Promise has no phantom procedure error type.
+  catchORPCError(Promise.resolve({ id: 1 }), { NOT_FOUND: undefined })
+  void invalidPromiseCode
 }
 
 // Reuse the same leaves at different depths so recursion cannot silently stop after one level.
@@ -265,3 +327,4 @@ function contextInference(raw: {
 void inference
 void nestedInference
 void contextInference
+void definedErrorInference
