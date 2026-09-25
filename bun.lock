@@ -11,16 +11,16 @@
         "oxlint": "^1.82.0",
       },
     },
-    "packages/orpc-nuxt": {
-      "name": "orpc-nuxt",
-      "version": "0.4.0",
+    "packages/orpc-vue": {
+      "name": "orpc-vue",
+      "version": "0.7.0",
       "dependencies": {
-        "@nuxt/kit": "^3.14.1592 || ^4.0.1",
         "devalue": "^5.0.0",
         "es-toolkit": "^1.52.0",
       },
       "devDependencies": {
         "@nuxt/cli": "^3.37.0",
+        "@nuxt/kit": "^3.14.1592 || ^4.0.1",
         "@nuxt/module-builder": "^1.0.3",
         "@nuxt/test-utils": "^4.3.2",
         "@orpc/client": "^2.0.0-beta.35",
@@ -41,6 +41,7 @@
         "zod": "^4.3.6",
       },
       "peerDependencies": {
+        "@nuxt/kit": "^3.14.1592 || ^4.0.1",
         "@orpc/client": "^2.0.0-beta.35",
         "@orpc/tanstack-query": "^2.0.0-beta.35",
         "@tanstack/vue-query": "^5.102.8",
@@ -49,6 +50,8 @@
         "vue": "^3.5.0",
       },
       "optionalPeers": [
+        "@nuxt/kit",
+        "nuxt",
         "vitest",
       ],
     },
@@ -1160,7 +1163,7 @@
 
     "open": ["open@11.0.2", "", { "dependencies": { "default-browser": "^5.5.1", "define-lazy-prop": "^3.0.0", "is-in-ssh": "^1.0.0", "is-inside-container": "^1.0.0", "powershell-utils": "^0.2.1", "wsl-utils": "^1.0.0" } }, "sha512-RWqF+pBSkqecEvCKOn8QYhaNdRMJDZRIrlS/7rTDdLHaPcfXGCZ/h8zb413NfvdeAV0MR7T1yJcA34/q+CSm1Q=="],
 
-    "orpc-nuxt": ["orpc-nuxt@workspace:packages/orpc-nuxt"],
+    "orpc-vue": ["orpc-vue@workspace:packages/orpc-vue"],
 
     "outdent": ["outdent@0.5.0", "", {}, "sha512-/jHxFIzoMXdqPzTaCpFzAAWhpkSjZPF4Vsn6jAfNpmbH/ymsmd7Qc6VE9BGn0L6YMj6uwpQLxCECpus4ukKS9Q=="],
 

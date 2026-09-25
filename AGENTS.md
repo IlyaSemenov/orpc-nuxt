@@ -1,10 +1,10 @@
-# orpc-nuxt Agent Guide
+# RPC Vue Workspace Agent Guide
 
 ## Overview
 
-oRPC integration for Nuxt.
+Vue and Nuxt integrations for RPC clients.
 
-Read [packages/orpc-nuxt/README.md](packages/orpc-nuxt/README.md) completely before changing the public API, package behavior, supported runtimes, or user documentation.
+Read the affected package's README completely before changing its public API, package behavior, supported runtimes, or user documentation.
 
 Extend this guide only with stable, non-obvious conventions, architecture, contracts, workflows, and gotchas.
 Do not catalog files or restate information evident from their names and locations.
@@ -25,7 +25,8 @@ Do not catalog files or restate information evident from their names and locatio
 - Build query and mutation options with the official oRPC utilities, preserving their keys and client context.
 - Register Vue lifecycle hooks before awaiting query completion.
 - Capture QueryClient during plugin initialization; `.invalidate()` must not require Vue injection at call time.
-- Keep the client entrypoint free of Nuxt runtime imports.
+- Keep Vue context factories free of client instances; provide clients per app or SSR request.
+- Keep Vue root entrypoints free of Nuxt runtime imports.
 - Write Nuxt plugin ordering metadata as literals in generated plugin source.
 - Use extensionless relative imports in package `src/` files.
 
