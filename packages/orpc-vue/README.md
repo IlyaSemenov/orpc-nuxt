@@ -1,6 +1,6 @@
 # orpc-vue
 
-oRPC v2 integration for Nuxt 3 and 4, built on TanStack Vue Query.
+oRPC v2 integration for Vue 3 and Nuxt 3/4, built on TanStack Vue Query.
 Add `useQuery` and `useMutation` to your oRPC procedures, with types inferred from your router.
 
 ```ts
@@ -17,6 +17,8 @@ npm install orpc-vue @orpc/client@2.0.0-beta.35 @orpc/server@2.0.0-beta.35 @orpc
 Install oRPC by version: v2 is still in beta, and this package needs `2.0.0-beta.35` or newer.
 
 ## Nuxt setup
+
+For a Vue app without Nuxt, see [Plain Vue setup](#plain-vue-setup).
 
 Register the module:
 
