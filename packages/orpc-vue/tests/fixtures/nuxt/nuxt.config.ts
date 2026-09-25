@@ -1,7 +1,7 @@
 import { env } from "node:process"
 
 // Use the public entrypoint so the fixture checks package exports as well as the built module.
-import orpcNuxt from "orpc-vue/nuxt"
+import orpcNuxt from "orpc-vue/nuxt/module"
 
 const customQueryClient = env.ORPC_TEST_QUERY_CLIENT === "custom"
 

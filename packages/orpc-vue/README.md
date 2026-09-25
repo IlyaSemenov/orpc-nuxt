@@ -23,7 +23,7 @@ Register the module:
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["orpc-vue/nuxt"],
+  modules: ["orpc-vue/nuxt/module"],
 })
 ```
 
@@ -32,7 +32,7 @@ Add a plugin for browser and SSR requests:
 ```ts
 // app/plugins/orpc.ts
 import type { RouterClient } from "@orpc/server"
-import { defineNuxtPlugin } from "orpc-vue/nuxt/runtime"
+import { defineNuxtPlugin } from "orpc-vue/nuxt"
 import type { router } from "~~/server/rpc/router"
 
 export default defineNuxtPlugin<RouterClient<typeof router>>(() => {
@@ -48,9 +48,12 @@ This assumes you have a router exported from `server/rpc/router.ts` and an RPC h
 The helper sends both browser and SSR requests over HTTP.
 For direct router calls during SSR with your own `context`, use [manual client setup](#manual-nuxt-client-setup).
 
-This helper takes client options instead of a regular Nuxt plugin, so import it explicitly from `orpc-vue/nuxt/runtime` rather than relying on Nuxt's auto-imported `defineNuxtPlugin`.
+This helper takes client options instead of a regular Nuxt plugin, so import it explicitly from `orpc-vue/nuxt` rather than relying on Nuxt's auto-imported `defineNuxtPlugin`.
 It shares that name because Nuxt uses it to check that each plugin is wrapped, and warns about plugins that are not.
-You can import it under an alias, such as `import { defineNuxtPlugin as defineORPCPlugin } from "orpc-vue/nuxt/runtime"`, because Nuxt also recognizes aliased imports.
+You can import it under an alias, such as `import { defineNuxtPlugin as defineORPCPlugin } from "orpc-vue/nuxt"`, because Nuxt also recognizes aliased imports.
+
+The module auto-imports `useOrpc` and `useOrpcQueryClient`.
+If you disable Nuxt auto-imports, import them from `orpc-vue/nuxt`.
 
 ## Queries
 
@@ -336,7 +339,7 @@ If your API runs in a separate service, configure the base URLs in `nuxt.config.
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["orpc-vue/nuxt"],
+  modules: ["orpc-vue/nuxt/module"],
   runtimeConfig: {
     orpc: {
       apiOrigin: "", // Optional SSR address; empty means use public.orpc.apiOrigin.
@@ -359,7 +362,7 @@ Use these settings in `app/plugins/orpc.ts`:
 // app/plugins/orpc.ts
 import type { router } from "@my-app/api"
 import type { RouterClient } from "@orpc/server"
-import { defineNuxtPlugin } from "orpc-vue/nuxt/runtime"
+import { defineNuxtPlugin } from "orpc-vue/nuxt"
 
 export default defineNuxtPlugin<RouterClient<typeof router>>(() => {
   const config = useRuntimeConfig()
@@ -388,7 +391,7 @@ Return a custom `link` when the server needs a request-scoped transport while th
 import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
 import { getRequestURL } from "h3"
-import { defineNuxtPlugin } from "orpc-vue/nuxt/runtime"
+import { defineNuxtPlugin } from "orpc-vue/nuxt"
 import type { router } from "~~/server/rpc/router"
 
 export default defineNuxtPlugin<RouterClient<typeof router>>(() => ({
@@ -416,7 +419,7 @@ The plugin setup callback has the same lifecycle: once per SSR request and once 
 Use `createORPCVueQuery` when you want SSR to call the router directly or need to own the complete client setup.
 Instead of the shared HTTP plugin above, add a browser plugin and a server plugin.
 
-Keep `orpc-vue/nuxt` in `modules` for auto-imports and QueryClient setup.
+Keep `orpc-vue/nuxt/module` in `modules` for auto-imports and QueryClient setup.
 Both plugins provide the client under the `orpc` key: `useOrpc()` reads it as `useNuxtApp().$orpc` and infers the router type from that injection.
 
 The browser plugin sends requests to `/rpc` over HTTP:
@@ -474,7 +477,7 @@ This example keeps results fresh for 30 seconds and disables retries:
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["orpc-vue/nuxt"],
+  modules: ["orpc-vue/nuxt/module"],
   orpc: {
     queryClient: {
       defaultOptions: {
@@ -536,7 +539,7 @@ If your app already installs Vue Query and transfers its cache between server an
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["orpc-vue/nuxt"],
+  modules: ["orpc-vue/nuxt/module"],
   orpc: { queryClient: false },
 })
 ```

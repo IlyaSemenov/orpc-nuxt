@@ -23,12 +23,12 @@
       "import": "./dist/runtime/client.js"
     },
     "./nuxt": {
-      "types": "./dist/types.d.mts",
-      "import": "./dist/module.mjs"
-    },
-    "./nuxt/runtime": {
       "types": "./dist/runtime/nuxt/runtime.d.ts",
       "import": "./dist/runtime/nuxt/runtime.js"
+    },
+    "./nuxt/module": {
+      "types": "./dist/types.d.mts",
+      "import": "./dist/module.mjs"
     },
     "./testing": {
       "types": "./dist/runtime/testing.d.ts",

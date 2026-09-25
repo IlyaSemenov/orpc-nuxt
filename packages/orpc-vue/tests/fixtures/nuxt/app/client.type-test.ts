@@ -2,7 +2,7 @@ import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
 import { type QueryClient, skipToken } from "@tanstack/vue-query"
 import { catchORPCError } from "orpc-vue"
-import { defineNuxtPlugin } from "orpc-vue/nuxt/runtime"
+import { defineNuxtPlugin } from "orpc-vue/nuxt"
 import { reactive, ref } from "vue"
 
 import type { router } from "../server/utils/router"

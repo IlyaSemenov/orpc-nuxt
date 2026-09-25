@@ -1,6 +1,6 @@
 import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
-import { defineNuxtPlugin } from "orpc-vue/nuxt/runtime"
+import { defineNuxtPlugin } from "orpc-vue/nuxt"
 
 import type { router } from "../../server/utils/router"
 
