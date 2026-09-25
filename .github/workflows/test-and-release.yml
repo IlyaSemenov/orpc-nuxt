@@ -75,3 +75,6 @@ jobs:
           commit: "Release ${{ env.CHANGED_PACKAGES }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Bootstrap only. Remove after configuring Trusted Publishing.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
