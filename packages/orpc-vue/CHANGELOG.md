@@ -1,5 +1,11 @@
 # orpc-vue
 
+## 0.9.0
+
+### Minor Changes
+
+- 93f8aff: Nuxt runtime helpers (`defineNuxtPlugin`, `useOrpc`, `useOrpcQueryClient`) moved from `orpc-vue/nuxt/runtime` to `orpc-vue/nuxt`, and the Nuxt module moved from `orpc-vue/nuxt` to `orpc-vue/nuxt/module`.
+
 ## 0.8.0
 
 ### Minor Changes
