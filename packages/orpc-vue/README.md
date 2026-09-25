@@ -48,6 +48,10 @@ This assumes you have a router exported from `server/rpc/router.ts` and an RPC h
 The helper sends both browser and SSR requests over HTTP.
 For direct router calls during SSR with your own `context`, use [manual client setup](#manual-nuxt-client-setup).
 
+This helper takes client options instead of a regular Nuxt plugin, so import it explicitly from `orpc-vue/nuxt/runtime` rather than relying on Nuxt's auto-imported `defineNuxtPlugin`.
+It shares that name because Nuxt uses it to check that each plugin is wrapped, and warns about plugins that are not.
+You can import it under an alias, such as `import { defineNuxtPlugin as defineORPCPlugin } from "orpc-vue/nuxt/runtime"`, because Nuxt also recognizes aliased imports.
+
 ## Queries
 
 Call `useQuery` in `<script setup>` or a Vue component's `setup()` function.
