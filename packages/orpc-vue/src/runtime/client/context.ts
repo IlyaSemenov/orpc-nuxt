@@ -1,5 +1,5 @@
 import type { AnyNestedClient } from "@orpc/client"
-import { hasInjectionContext, inject, type InjectionKey } from "vue"
+import { createClientContext } from "@rpc-vue/core/vue/context"
 
 import type { ORPCVueQueryClient } from "../types"
 
@@ -10,19 +10,7 @@ import type { ORPCVueQueryClient } from "../types"
  *
  * @returns A key for `app.provide()` and a composable that reads the provided client.
  */
-export function createORPCVueContext<T extends AnyNestedClient>() {
-  const key: InjectionKey<ORPCVueQueryClient<T>> = Symbol("orpc-vue")
-
-  return {
-    key,
-    useOrpc(): ORPCVueQueryClient<T> {
-      const client = hasInjectionContext() ? inject(key, undefined) : undefined
-      if (!client) {
-        throw new Error(
-          "No oRPC client was provided. Call app.provide(context.key, orpc) before using context.useOrpc().",
-        )
-      }
-      return client
-    },
-  }
+export function createORPCVueContext<TClient extends AnyNestedClient>() {
+  const { key, useRpc } = createClientContext<ORPCVueQueryClient<TClient>>("oRPC", "useOrpc")
+  return { key, useOrpc: useRpc }
 }

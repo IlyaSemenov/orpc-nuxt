@@ -4,9 +4,9 @@ export { catchORPCError } from "./client/error"
 export type {
   AwaitableQuery,
   ORPCMutationOptions,
-  ORPCVueQueryClient,
-  ORPCVueQueryOptions,
   ORPCQueryOptions,
   ORPCQueryResult,
   ORPCSelectedQueryResult,
+  ORPCVueQueryClient,
+  ORPCVueQueryOptions,
 } from "./types"

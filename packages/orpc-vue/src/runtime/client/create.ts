@@ -1,13 +1,15 @@
 import type { AnyNestedClient } from "@orpc/client"
 import { createTanstackQueryUtils } from "@orpc/tanstack-query"
-import { type QueryKey, useQueryClient } from "@tanstack/vue-query"
+import { useReactiveMutation } from "@rpc-vue/core/vue-query/mutation"
+import { useReactiveQuery } from "@rpc-vue/core/vue-query/query"
+import { captureQueryClient } from "@rpc-vue/core/vue-query/query-client"
+import type { QueryKey } from "@tanstack/vue-query"
 
 import type { ORPCVueQueryClient, ORPCVueQueryOptions } from "../types"
-import { useORPCMutation } from "../vue-query/mutation"
-import { useORPCQuery } from "../vue-query/query"
-import { resolveQueryClient } from "../vue-query/query-client"
 import { decorateClient } from "./decorate"
 import { catchDefinedErrors } from "./error"
+import { hashORPCKey } from "./hash"
+import { createProcedureOptions } from "./utils"
 
 /**
  * Add reactive query and mutation composables while preserving oRPC's TanStack utilities.
@@ -18,38 +20,35 @@ import { catchDefinedErrors } from "./error"
  * @param client - The application-owned oRPC client whose router types are preserved.
  * @param options - Cache key prefix and an optional QueryClient for standalone usage.
  */
-export function createORPCVueQuery<T extends AnyNestedClient>(
-  client: T,
+export function createORPCVueQuery<TClient extends AnyNestedClient>(
+  client: TClient,
   options: ORPCVueQueryOptions = {},
-): ORPCVueQueryClient<T> {
+): ORPCVueQueryClient<TClient> {
   const utils = createTanstackQueryUtils(client, { prefix: options.prefix })
-  // Capture the app's cache while injection is available; mutation callbacks run outside setup.
-  let queryClient = options.queryClient ?? resolveQueryClient()
-
-  /** Resolve lazily for clients created outside Vue, then reuse the same cache in callbacks. */
-  function getQueryClient() {
-    return (queryClient ??= useQueryClient())
-  }
+  // oRPC namespaces keys even for an empty prefix; unprefixed keys keep the cache's global hashing.
+  const getQueryClient = captureQueryClient(
+    options.queryClient,
+    options.prefix === undefined ? undefined : utils.key(),
+    hashORPCKey,
+  )
 
   /** Bind composables to one utility node without invoking Vue hooks during traversal. */
   function createMethods(target: object) {
+    const procedure = target as {
+      call: (input: unknown, options: unknown) => Promise<unknown>
+      key: () => QueryKey
+    }
+    const { queryOptions, mutationOptions } = createProcedureOptions(target)
     return {
-      useQuery(input: unknown, queryOptions: unknown) {
-        return useORPCQuery(target, input, queryOptions, getQueryClient())
-      },
-      useMutation(mutationOptions: unknown) {
-        return useORPCMutation(target, mutationOptions, getQueryClient())
-      },
-      callCatching(input: unknown, handlers: Record<string, unknown>, callOptions: unknown) {
-        const utils = target as { call: (input: unknown, options: unknown) => Promise<unknown> }
-        return catchDefinedErrors(utils.call(input, callOptions), handlers)
-      },
-      invalidate() {
-        const utils = target as { key: () => QueryKey }
-        return getQueryClient().invalidateQueries({ queryKey: utils.key() })
-      },
+      useQuery: (input: unknown, settings: unknown) =>
+        useReactiveQuery(queryOptions, input, settings, getQueryClient()),
+      useMutation: (settings: unknown) =>
+        useReactiveMutation(mutationOptions, settings, getQueryClient()),
+      callCatching: (input: unknown, handlers: Record<string, unknown>, callOptions: unknown) =>
+        catchDefinedErrors(procedure.call(input, callOptions), handlers),
+      invalidate: () => getQueryClient().invalidateQueries({ queryKey: procedure.key() }),
     }
   }
 
-  return decorateClient(utils, createMethods) as ORPCVueQueryClient<T>
+  return decorateClient(utils, createMethods) as ORPCVueQueryClient<TClient>
 }

@@ -6,18 +6,16 @@ import type {
   InferClientContext,
 } from "@orpc/client"
 import { createORPCClient, createORPCErrorFromJson, ORPCError } from "@orpc/client"
-import { QueryClient } from "@tanstack/vue-query"
+import { createTestRegistry, type TestClient } from "@rpc-vue/core/testing/registry"
 import type { Mock } from "vitest"
-import { vi } from "vitest"
 
 import { createORPCVueQuery } from "./client/create"
 import type { ORPCVueQueryClient, ORPCVueQueryOptions } from "./types"
 
-type MaybePromise<T> = T | Promise<T>
+type MaybePromise<TValue> = TValue | Promise<TValue>
 type RuntimeHandlerOptions = {
   errors: Record<string, (options?: RuntimeErrorOptions) => AnyORPCError>
 }
-type RegisteredHandler = (input: unknown) => unknown
 type RuntimeErrorOptions = ErrorOptions & { message?: string; data?: unknown }
 
 type ProcedureError<TProcedure> =
@@ -66,27 +64,24 @@ export interface TestORPCProcedure<TProcedure> {
 }
 
 /** A router-shaped tree whose procedure leaves register test implementations. */
-export type TestORPCProcedures<T extends AnyNestedClient> =
-  T extends Client<infer Context, infer Input, infer Output, infer Error>
+export type TestORPCProcedures<TClient extends AnyNestedClient> =
+  TClient extends Client<infer Context, infer Input, infer Output, infer Error>
     ? TestORPCProcedure<Client<Context, Input, Output, Error>>
     : {
-        [Key in keyof T]: T[Key] extends AnyNestedClient ? TestORPCProcedures<T[Key]> : never
+        [Key in keyof TClient]: TClient[Key] extends AnyNestedClient
+          ? TestORPCProcedures<TClient[Key]>
+          : never
       }
 
 /** The isolated client, procedure registry and cleanup function created for a test suite. */
-export interface TestORPCClient<T extends AnyNestedClient> {
-  /** The decorated client to provide to a component or return from a mocked `useOrpc()`. */
-  client: ORPCVueQueryClient<T>
-  /** Register typed implementations and receive Vitest mocks for call assertions. */
-  procedures: TestORPCProcedures<T>
-  /** The cache the client reads and writes, to seed or inspect from a test. */
-  queryClient: QueryClient
-  /** Remove every registered procedure implementation and clear the query cache. */
-  reset: () => void
-}
+export type TestORPCClient<TClient extends AnyNestedClient> = TestClient<
+  ORPCVueQueryClient<TClient>,
+  TestORPCProcedures<TClient>
+>
 
 /**
  * Create an isolated fake oRPC client for Vue or Nuxt component tests.
+ * Handlers replace the server procedures, so middleware and schema validation do not run.
  * The entrypoint has no Nuxt runtime dependency.
  * A shared setup file can therefore import it when Vitest hoists `mockNuxtImport()`.
  *
@@ -96,55 +91,25 @@ export interface TestORPCClient<T extends AnyNestedClient> {
  * @param options - Cache key prefix and a QueryClient to use instead of the owned one.
  * @returns A decorated client, its typed registration tree, its cache and a reset function.
  */
-export function createTestORPCClient<T extends AnyNestedClient>(
+export function createTestORPCClient<TClient extends AnyNestedClient>(
   options: ORPCVueQueryOptions = {},
-): TestORPCClient<T> {
-  const registrations = new Map<string, Mock<RegisteredHandler>>()
-  const queryClient =
-    options.queryClient ??
-    new QueryClient({
-      defaultOptions: {
-        // Retries turn a failing procedure into a test timeout instead of a reported failure.
-        queries: { retry: false },
-      },
-    })
-
-  const link: ClientLink<InferClientContext<T>> = {
+): TestORPCClient<TClient> {
+  const registry = createTestRegistry("oRPC", options.queryClient, () => ({
+    errors: createErrorConstructors(),
+  }))
+  const link: ClientLink<InferClientContext<TClient>> = {
     async call(path, input) {
-      const name = path.join(".")
-      const handler = registrations.get(name)
-      if (!handler) {
-        throw new Error(`No test handler is registered for oRPC procedure "${name}"`)
-      }
-      return await handler(input)
+      return await registry.call(path.join("."), input)
     },
   }
-  const client = createORPCVueQuery(createORPCClient<T>(link), { ...options, queryClient })
-  const procedures = createRecursiveProxy([], (path, args) => {
-    if (path.at(-1) !== "handle") {
-      throw new Error(`Unknown test procedure call: ${path.join(".")}`)
-    }
-    const handler = args[0]
-    if (typeof handler !== "function") {
-      throw new TypeError(
-        `A test handler must be a function for oRPC procedure "${path.slice(0, -1).join(".")}"`,
-      )
-    }
-    const options = { errors: createErrorConstructors() }
-    // Keep the public mock's call tuples limited to procedure input while the implementation gets helpers.
-    const mock = vi.fn((input: unknown) => handler(input, options))
-    registrations.set(path.slice(0, -1).join("."), mock)
-    return mock
-  }) as TestORPCProcedures<T>
-
   return {
-    client,
-    procedures,
-    queryClient,
-    reset: () => {
-      registrations.clear()
-      queryClient.clear()
-    },
+    client: createORPCVueQuery(createORPCClient<TClient>(link), {
+      ...options,
+      queryClient: registry.queryClient,
+    }),
+    procedures: registry.procedures as TestORPCProcedures<TClient>,
+    queryClient: registry.queryClient,
+    reset: registry.reset,
   }
 }
 
@@ -158,29 +123,6 @@ function createErrorConstructors(): RuntimeHandlerOptions["errors"] {
         return createORPCErrorFromJson({ ...error.toJSON(), defined: true }, { cause: error.cause })
       }
       return target[property]
-    },
-  })
-}
-
-/** Build the registration tree lazily because an oRPC client does not expose router keys. */
-function createRecursiveProxy(
-  path: string[],
-  call: (path: string[], args: unknown[]) => unknown,
-): unknown {
-  const target = (...args: unknown[]) => call(path, args)
-  const children = new Map<string, unknown>()
-
-  return new Proxy(target, {
-    get(_, property, receiver) {
-      // Promise resolution and reflection must not create synthetic router paths.
-      if (typeof property !== "string" || property === "then") {
-        return Reflect.get(target, property, receiver)
-      }
-      if (children.has(property)) return children.get(property)
-
-      const child = createRecursiveProxy([...path, property], call)
-      children.set(property, child)
-      return child
     },
   })
 }

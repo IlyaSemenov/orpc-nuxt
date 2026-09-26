@@ -3,7 +3,10 @@
   "compilerOptions": {
     "paths": {
       // Bun and tsc check source here; the Nuxt fixture uses its own config and built exports.
-      "orpc-vue": ["../src/runtime/client.ts"]
+      "orpc-vue": ["../src/runtime/client.ts"],
+      "orpc-vue/nuxt": ["../src/runtime/nuxt/runtime.ts"],
+      "orpc-vue/nuxt/module": ["../src/module.ts"],
+      "orpc-vue/testing": ["../src/runtime/testing.ts"]
     }
   },
   "include": ["**/*.ts"],

@@ -2,7 +2,7 @@ import { mockNuxtImport } from "@nuxt/test-utils/runtime"
 import type { RouterClient } from "@orpc/server"
 import { createTestORPCClient } from "orpc-vue/testing"
 import { afterEach } from "vitest"
-import type { router } from "~~/server/utils/router"
+import type { router } from "~~/server/orpc/router"
 
 export const { client, procedures, reset } = createTestORPCClient<RouterClient<typeof router>>()
 

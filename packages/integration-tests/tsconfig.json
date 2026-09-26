@@ -1,0 +1,14 @@
+{
+  "extends": "@tsconfig/bun",
+  "compilerOptions": {
+    "types": ["bun"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "paths": {
+      // Runtime tests check source; the isolated Nuxt consumer uses built package exports.
+      "orpc-vue": ["../orpc-vue/src/runtime/client.ts"],
+      "trpc-vue": ["../trpc-vue/src/runtime/client.ts"],
+      "#orpc-vue/*": ["../orpc-vue/src/runtime/*"]
+    }
+  },
+  "include": ["tests/runtime/**/*.ts", "tests/nuxt/**/*.ts", "*.ts"]
+}

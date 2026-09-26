@@ -1,17 +1,16 @@
 import { RPCLink } from "@orpc/client/fetch"
 import type { RouterClient } from "@orpc/server"
 import { type QueryClient, skipToken } from "@tanstack/vue-query"
-import { catchORPCError } from "orpc-vue"
+import { catchORPCError, createORPCVueContext } from "orpc-vue"
 import { defineNuxtPlugin } from "orpc-vue/nuxt"
 import { reactive, ref } from "vue"
-
-import type { router } from "../server/utils/router"
+import type { router } from "~~/server/orpc/router"
 
 /** Verify helper options at the package boundary without executing a Nuxt plugin. */
 export function checkPluginOptions() {
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({
-    url: "/rpc",
-    serverUrl: "http://api:3000/rpc",
+    url: "/orpc",
+    serverUrl: "http://api:3000/orpc",
     credentials: "include",
     forwardHeaders: ["cookie"],
     prefix: "blog",
@@ -19,9 +18,9 @@ export function checkPluginOptions() {
   // @ts-expect-error The RPC handler URL is required.
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({}))
   // @ts-expect-error Fetch credentials use the standard RequestCredentials values.
-  defineNuxtPlugin<RouterClient<typeof router>>(() => ({ url: "/rpc", credentials: "all" }))
+  defineNuxtPlugin<RouterClient<typeof router>>(() => ({ url: "/orpc", credentials: "all" }))
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({
-    link: new RPCLink({ url: "/rpc" }),
+    link: new RPCLink({ url: "/orpc" }),
   }))
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({
     link: ({ nuxtApp, event }) => {
@@ -29,14 +28,14 @@ export function checkPluginOptions() {
       event?.context satisfies Record<string, unknown> | undefined
       return new RPCLink({
         origin: event ? "http://ssr.example" : undefined,
-        url: "/rpc",
+        url: "/orpc",
       })
     },
   }))
   // @ts-expect-error A custom link replaces the built-in URL transport configuration.
   defineNuxtPlugin<RouterClient<typeof router>>(() => ({
-    link: new RPCLink({ url: "/rpc" }),
-    url: "/rpc",
+    link: new RPCLink({ url: "/orpc" }),
+    url: "/orpc",
   }))
 }
 
@@ -48,6 +47,9 @@ export function checkClientTypes() {
   const orpc = useOrpc()
   const query = orpc.hello.useQuery()
   const name: string | undefined = query.data.value?.name
+  query.data.value?.date satisfies Date | undefined
+  // @ts-expect-error Date output must not widen to its serialized string.
+  query.data.value?.date satisfies string | undefined
   // @ts-expect-error Unknown procedure paths must not become any.
   orpc.doesNotExist.useQuery()
   // @ts-expect-error Raw cache data has a fixed shape.
@@ -64,6 +66,7 @@ export function checkClientTypes() {
 export async function checkNestedClientTypes() {
   const orpc = useOrpc()
   const injected = useNuxtApp().$orpc
+  const provided = createORPCVueContext<RouterClient<typeof router>>().useOrpc()
   const input = ref({ id: 1 })
   const options = ref({ enabled: true })
   const query = orpc.blog.posts.get.useQuery(input, options)
@@ -166,6 +169,8 @@ export async function checkNestedClientTypes() {
   injected.blog.admin.useMutation()
   // @ts-expect-error Injected queries must validate input independently of useOrpc.
   injected.blog.posts.get.useQuery({ id: "wrong" })
+  // @ts-expect-error Clients from a Vue context retain the router's input types.
+  provided.blog.admin.comments.get.useQuery({ id: "wrong" })
 
   const direct = await injected.blog.posts.get.call({ id: 1 })
   orpc.blog.posts.invalidate() satisfies Promise<void>

@@ -5,6 +5,7 @@
 Vue and Nuxt integrations for RPC clients.
 
 Read the affected package's README completely before changing its public API, package behavior, supported runtimes, or user documentation.
+Each workspace package's `AGENTS.md` adds the conventions specific to that package.
 
 Extend this guide only with stable, non-obvious conventions, architecture, contracts, workflows, and gotchas.
 Do not catalog files or restate information evident from their names and locations.
@@ -22,17 +23,22 @@ Do not catalog files or restate information evident from their names and locatio
 
 ## Implementation
 
-- Build query and mutation options with the official oRPC utilities, preserving their keys and client context.
-- Register Vue lifecycle hooks before awaiting query completion.
+- Keep each public adapter installable without the other adapter or private core; published JavaScript and declarations must not import either package.
+- Implement behavior, types, test helpers and tooling shared by both adapters once in the private core; keep in adapters only protocol-specific code and their public names and documentation.
+- Keep query identity consistent across observers, imperative cache access, invalidation and SSR hydration; adapter hashing must not change unrelated queries' hashing.
 - Capture QueryClient during plugin initialization; `.invalidate()` must not require Vue injection at call time.
 - Keep Vue context factories free of client instances; provide clients per app or SSR request.
 - Keep Vue root entrypoints free of Nuxt runtime imports.
-- Write Nuxt plugin ordering metadata as literals in generated plugin source.
-- Use extensionless relative imports in package `src/` files.
+- Use extensionless relative imports within a package's `src/`.
+- Cross package and test boundaries only through aliases: `@rpc-vue/core/*` for core, the package's public specifiers mapped in `tests/tsconfig.json` for its source, and `~~/` inside Nuxt fixtures; never through relative paths such as `../../src`.
+- When source files use tsconfig path aliases, check that built `dist/*.d.ts` files import only their own chunks and declared dependencies.
 
 ## Documentation
 
 - Write public README and JSDoc text for package users who do not know the implementation.
+- Keep shared Vue and Nuxt behavior consistent across both adapter READMEs; preserve differences required by their protocol APIs.
+- Give every RPC client a distinct stable nonempty prefix in shared-cache examples so root invalidation stays within its namespace.
+- In adapter READMEs, serve RPC handlers at each protocol's official path, `/rpc` for oRPC and `/trpc` for tRPC, and keep each router in the `server/` directory of the same name.
 - Add JSDoc to every exported declaration and to internal helpers whose contract, inputs, output, or failure behavior is not obvious.
 - Add inline comments beside every non-obvious invariant, algorithmic choice, safety constraint, and intentionally limited behavior.
 - Update nearby JSDoc and inline comments whenever the documented code changes, and remove comments that no longer apply.
@@ -67,13 +73,17 @@ Describe the user-visible change.
 
 ## Tests
 
-- Test deeply nested router inference through `useOrpc()` and `$orpc`, with valid and invalid calls against source types and built declarations.
-- Add a `describe` block where the file gives a reason for it: several APIs or behaviors in one file, or a fixture that belongs to some cases but not all.
+- Add a `describe` block where the file gives a reason for it: several APIs or behaviors in one file, a fixture that belongs to some cases but not all, or a file name that does not say what its tests cover.
   Name such a block after what it covers and keep its fixtures inside it.
 - Distinguish several same-kind values by role rather than by order.
   When values differ only by order, number them with digits instead of ordinal words.
 - Keep tests deterministic so a failure repeats on every run.
   Generate random inputs from an explicit seed and print the seed in failure messages so the failing input can be replayed.
+- Test deeply nested router inference through each adapter's Vue accessor, Nuxt composable and `$` injection, with valid and invalid calls against source types and built declarations.
+- Test shared behavior once in the private core through its own APIs; in adapters, test only protocol-specific behavior and how the adapter wires the core.
+- Share the adapters' Nuxt fixture pages and browser tests through core's `test-utils/`; keep the rest of each adapter's Nuxt fixture structurally identical to the other adapter's, differing only where protocol APIs require it.
+- Check each adapter alone with its module-owned QueryClient and HTTP transport options; check application-owned QueryClients and custom transport factories in the integration test workspace.
+- Keep cross-adapter compatibility tests in the private integration test workspace; neither adapter's test suite may depend on the other adapter.
 
 ## Checks
 

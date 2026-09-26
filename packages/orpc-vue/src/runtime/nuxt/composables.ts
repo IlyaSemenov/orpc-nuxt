@@ -1,7 +1,6 @@
+import { useNuxtQueryClient } from "@rpc-vue/core/nuxt/composables"
 import type { QueryClient } from "@tanstack/vue-query"
 import { type NuxtApp, useNuxtApp } from "nuxt/app"
-
-import { resolveQueryClient } from "../vue-query/query-client"
 
 // Preserve the application's inferred router instead of declaring a generic $orpc injection.
 type InjectedORPCClient = NuxtApp extends { $orpc: infer TClient } ? TClient : never
@@ -28,11 +27,5 @@ export function useOrpc(): InjectedORPCClient {
  * Throws when no QueryClient is installed, as with queryClient: false and no Vue Query plugin.
  */
 export function useOrpcQueryClient(): QueryClient {
-  const queryClient = resolveQueryClient(useNuxtApp().vueApp)
-  if (!queryClient) {
-    throw new Error(
-      "Install Vue Query before calling useOrpcQueryClient(). Enable the module's queryClient option, or install Vue Query from a Nuxt plugin.",
-    )
-  }
-  return queryClient
+  return useNuxtQueryClient("useOrpcQueryClient")
 }

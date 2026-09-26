@@ -1,6 +1,5 @@
 import type { Client, ORPCError } from "@orpc/client"
-
-import { createTestORPCClient } from "../../src/runtime/testing"
+import { createTestORPCClient } from "orpc-vue/testing"
 
 type AppClient = {
   admin: {

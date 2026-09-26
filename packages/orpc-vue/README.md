@@ -1,6 +1,6 @@
 # orpc-vue
 
-oRPC v2 integration for Vue 3 and Nuxt 3/4, built on TanStack Vue Query.
+oRPC v2 integration for Vue 3.5 and Nuxt 3/4, built on TanStack Vue Query 5.102.8 or newer.
 Add `useQuery` and `useMutation` to your oRPC procedures, with types inferred from your router.
 
 ```ts
@@ -50,7 +50,8 @@ This assumes you have a router exported from `server/rpc/router.ts` and an RPC h
 The helper sends both browser and SSR requests over HTTP.
 For direct router calls during SSR with your own `context`, use [manual client setup](#manual-nuxt-client-setup).
 
-This helper takes client options instead of a regular Nuxt plugin, so import it explicitly from `orpc-vue/nuxt` rather than relying on Nuxt's auto-imported `defineNuxtPlugin`.
+The callback passed to this helper returns RPC client options.
+Import the helper explicitly from `orpc-vue/nuxt`; Nuxt's auto-imported `defineNuxtPlugin` takes a regular Nuxt plugin.
 It shares that name because Nuxt uses it to check that each plugin is wrapped, and warns about plugins that are not.
 You can import it under an alias, such as `import { defineNuxtPlugin as defineORPCPlugin } from "orpc-vue/nuxt"`, because Nuxt also recognizes aliased imports.
 
@@ -161,6 +162,9 @@ await orpc.blog.posts.get.invalidate()
 
 // Every query under this router branch.
 await orpc.blog.posts.invalidate()
+
+// Every query of this client.
+await orpc.invalidate()
 
 // Only this query's current input.
 await query.invalidate()
@@ -493,7 +497,8 @@ export default defineNuxtConfig({
 })
 ```
 
-Query inputs can include oRPC types such as `bigint` and `Date`; the module supports them in cache keys.
+Query inputs can include oRPC types such as `bigint` and `Date`; cache keys distinguish them from their JSON forms.
+Keys are compared this way when the module creates the QueryClient or the client has a [prefix](#multiple-clients).
 For custom classes in query results, register a Nuxt payload serializer or use TanStack dehydration options to exclude those queries from the payload.
 
 ### Runtime configuration
@@ -536,7 +541,8 @@ During server rendering, call it inside `nuxtApp.runWithContext()`.
 
 ### Existing Vue Query setup
 
-If your app already installs Vue Query and transfers its cache between server and browser, disable the module's QueryClient setup:
+If your app or another module already installs Vue Query and handles SSR hydration, reuse its QueryClient by disabling this module's cache setup.
+This also applies when using another integration such as `trpc-vue`.
 
 ```ts
 // nuxt.config.ts
@@ -546,12 +552,13 @@ export default defineNuxtConfig({
 })
 ```
 
-Your Vue Query plugin must install QueryClient before the oRPC plugin runs.
-Use `enforce: "pre"` and omit `parallel: true`.
+Queries and mutations will use the existing cache.
+Install it before the oRPC client plugin runs; for an application plugin, use `enforce: "pre"` and omit `parallel: true`.
 
 ### Multiple clients
 
-If you have multiple oRPC clients with the same procedure paths, give each a different `prefix` so they don't share cached results:
+When several RPC clients share a QueryClient, give each a different `prefix` to keep their cache keys and invalidation separate.
+Set `prefix` in your client plugin configuration, or pass it to the factory:
 
 ```ts
 const orpc = createORPCVueQuery(client, { prefix: "blog" })
@@ -618,6 +625,9 @@ test("renders the posts", async () => {
 })
 ```
 
+Handlers replace your server procedures, so middleware and input and output validation do not run.
+To test server behavior, call your real router with `createRouterClient()`.
+
 The second handler argument provides typed error constructors derived from that procedure's `.errors()` map:
 
 ```ts
@@ -671,6 +681,8 @@ The example app uses the built package, so rebuild after changing its source.
 
 From the repository root, install the shared test browser with `bunx playwright install chromium-headless-shell`.
 Then run `bun run test:nuxt` from this package's directory to check the packed npm archive with the Nuxt version installed in the workspace.
-It is checked with both module-managed and app-managed QueryClients, including types, SSR, and hydration in development and production.
+It checks types, SSR, and hydration in development and production.
 
 To check other Nuxt versions by hand, pass them explicitly: `bun run test:nuxt 3.14.1592 4.0.1`.
+
+Cross-adapter cache and SSR tests, app-managed QueryClients and custom transports are checked in the [private integration test workspace](../integration-tests/README.md).

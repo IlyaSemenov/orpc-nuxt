@@ -18,11 +18,11 @@ function definedError<Code extends "CONFLICT" | "NOT_FOUND", Data>(
   return error
 }
 
-function result<T>(value: T): PromiseWithError<T, DeclaredError> {
+function result<TOutput>(value: TOutput): PromiseWithError<TOutput, DeclaredError> {
   return Promise.resolve(value)
 }
 
-function failure<T>(error: unknown): PromiseWithError<T, DeclaredError> {
+function failure<TOutput>(error: unknown): PromiseWithError<TOutput, DeclaredError> {
   return Promise.reject(error)
 }
 

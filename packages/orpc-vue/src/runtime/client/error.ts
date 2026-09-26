@@ -1,4 +1,9 @@
-import { type AnyORPCError, isDefinedError } from "@orpc/client"
+import {
+  type AnyORPCError,
+  type ClientContext,
+  type FriendlyClientOptions,
+  isDefinedError,
+} from "@orpc/client"
 
 type ErrorOf<TPromise extends Promise<unknown>> = TPromise extends {
   __error?: { type: infer Error }
@@ -34,6 +39,21 @@ export type HandledResult<Handlers> = {
     ? Awaited<Result>
     : Awaited<Handlers[Code]>
 }[keyof Handlers]
+
+/** The `callCatching()` method of a finite procedure in a decorated client. */
+export interface CallCatching<TClientContext extends ClientContext, TInput, TOutput, TError> {
+  /**
+   * Call the procedure and handle selected declared errors like `catchORPCError()`.
+   * Pass `undefined` as input for procedures without input.
+   */
+  callCatching<Handlers extends object & DefinedErrorHandlers<TError>>(
+    input: TInput,
+    handlers: Handlers & Record<Exclude<keyof Handlers, DefinedErrorCode<TError>>, never>,
+    ...rest: object extends TClientContext
+      ? [options?: FriendlyClientOptions<TClientContext>]
+      : [options: FriendlyClientOptions<TClientContext>]
+  ): Promise<TOutput | HandledResult<Handlers>>
+}
 
 /**
  * Handle selected errors declared by an oRPC procedure and rethrow every other rejection.

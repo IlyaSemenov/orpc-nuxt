@@ -1,4 +1,4 @@
-import type { ModuleOptions } from "../../src/module"
+import type { ModuleOptions } from "orpc-vue/nuxt/module"
 
 const options: ModuleOptions = {
   queryClient: {
