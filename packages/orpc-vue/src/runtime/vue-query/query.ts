@@ -1,6 +1,6 @@
 import type { ClientContext } from "@orpc/client"
 import type { ProcedureUtils } from "@orpc/tanstack-query"
-import { type QueryClient, skipToken, useQuery, useQueryClient } from "@tanstack/vue-query"
+import { type QueryClient, skipToken, useQuery } from "@tanstack/vue-query"
 import { cloneDeep } from "es-toolkit"
 import {
   computed,
@@ -33,20 +33,19 @@ type RuntimeProcedure = ProcedureUtils<ClientContext, unknown, unknown, Error>
  * @param target - The procedure's upstream TanStack utilities, supplied by the client decorator.
  * @param input - A value, ref or getter; skipToken suppresses automatic fetching.
  * @param options - Query options, optionally wrapped in a ref or getter.
- * @param client - An explicit cache owner; otherwise the injected QueryClient is used.
+ * @param queryClient - The cache owner resolved by the client factory.
  * @returns Live query refs plus a promise waiting for the initial active fetch.
  */
 export function useORPCQuery(
   target: object,
   input: unknown,
   options: unknown,
-  client?: QueryClient,
+  queryClient: QueryClient,
 ): AwaitableQuery<ORPCQueryResult<unknown, Error, true>> {
   if (!getCurrentScope()) {
     throw new Error("useQuery() requires a component setup or an active Vue effect scope.")
   }
   const procedure = target as RuntimeProcedure
-  const queryClient = client ?? useQueryClient()
   const instance = getCurrentInstance()
   // A standalone browser scope has no mount hook; component queries wait for actual mounting.
   const mounted = ref(typeof window !== "undefined" && !instance)

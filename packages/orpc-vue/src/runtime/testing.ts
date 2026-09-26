@@ -17,7 +17,6 @@ type MaybePromise<T> = T | Promise<T>
 type RuntimeHandlerOptions = {
   errors: Record<string, (options?: RuntimeErrorOptions) => AnyORPCError>
 }
-type RuntimeHandler = (input: unknown, options: RuntimeHandlerOptions) => unknown
 type RegisteredHandler = (input: unknown) => unknown
 type RuntimeErrorOptions = ErrorOptions & { message?: string; data?: unknown }
 
@@ -110,27 +109,14 @@ export function createTestORPCClient<T extends AnyNestedClient>(
       },
     })
 
-  /** Register one handler without sharing state with another factory instance. */
-  function registerHandler(path: string, handler: RuntimeHandler) {
-    const options = { errors: createErrorConstructors() }
-    // Keep the public mock's call tuples limited to procedure input while the implementation gets helpers.
-    const mock = vi.fn((input: unknown) => handler(input, options))
-    registrations.set(path, mock)
-    return mock
-  }
-
-  /** Dispatch a client call to the handler registered for its complete router path. */
-  async function callHandler(path: string, input: unknown) {
-    const handler = registrations.get(path)
-    if (!handler) {
-      throw new Error(`No test handler is registered for oRPC procedure "${path}"`)
-    }
-    return await handler(input)
-  }
-
   const link: ClientLink<InferClientContext<T>> = {
     async call(path, input) {
-      return await callHandler(path.join("."), input)
+      const name = path.join(".")
+      const handler = registrations.get(name)
+      if (!handler) {
+        throw new Error(`No test handler is registered for oRPC procedure "${name}"`)
+      }
+      return await handler(input)
     },
   }
   const client = createORPCVueQuery(createORPCClient<T>(link), { ...options, queryClient })
@@ -144,7 +130,11 @@ export function createTestORPCClient<T extends AnyNestedClient>(
         `A test handler must be a function for oRPC procedure "${path.slice(0, -1).join(".")}"`,
       )
     }
-    return registerHandler(path.slice(0, -1).join("."), handler as RuntimeHandler)
+    const options = { errors: createErrorConstructors() }
+    // Keep the public mock's call tuples limited to procedure input while the implementation gets helpers.
+    const mock = vi.fn((input: unknown) => handler(input, options))
+    registrations.set(path.slice(0, -1).join("."), mock)
+    return mock
   }) as TestORPCProcedures<T>
 
   return {
@@ -160,20 +150,14 @@ export function createTestORPCClient<T extends AnyNestedClient>(
 
 /** Create lazy error constructors without requiring the procedure's runtime contract. */
 function createErrorConstructors(): RuntimeHandlerOptions["errors"] {
-  const constructors = new Map<string, (options?: RuntimeErrorOptions) => AnyORPCError>()
-
   return new Proxy(Object.create(null) as RuntimeHandlerOptions["errors"], {
     get(target, property, receiver) {
       if (typeof property !== "string") return Reflect.get(target, property, receiver)
-      const cached = constructors.get(property)
-      if (cached) return cached
-
-      const constructor = (options?: RuntimeErrorOptions) => {
+      target[property] ??= (options?: RuntimeErrorOptions) => {
         const error = new ORPCError(property, options)
         return createORPCErrorFromJson({ ...error.toJSON(), defined: true }, { cause: error.cause })
       }
-      constructors.set(property, constructor)
-      return constructor
+      return target[property]
     },
   })
 }
@@ -183,7 +167,7 @@ function createRecursiveProxy(
   path: string[],
   call: (path: string[], args: unknown[]) => unknown,
 ): unknown {
-  const target = () => {}
+  const target = (...args: unknown[]) => call(path, args)
   const children = new Map<string, unknown>()
 
   return new Proxy(target, {
@@ -197,9 +181,6 @@ function createRecursiveProxy(
       const child = createRecursiveProxy([...path, property], call)
       children.set(property, child)
       return child
-    },
-    apply(_, __, args) {
-      return call(path, args)
     },
   })
 }

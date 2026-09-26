@@ -15,9 +15,9 @@ type RuntimeProcedure = ProcedureUtils<ClientContext, unknown, unknown, Error>
  *
  * @param target - The procedure's upstream TanStack utilities, supplied by the client decorator.
  * @param options - Mutation options, optionally wrapped in a ref or getter.
- * @param queryClient - An explicit cache owner; otherwise Vue Query uses the injected client.
+ * @param queryClient - The cache owner resolved by the client factory.
  */
-export function useORPCMutation(target: object, options: unknown, queryClient?: QueryClient) {
+export function useORPCMutation(target: object, options: unknown, queryClient: QueryClient) {
   if (!getCurrentScope()) {
     throw new Error("useMutation() requires a component setup or an active Vue effect scope.")
   }
